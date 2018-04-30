@@ -91,8 +91,7 @@ class Func(object):
         '1': True, 'yes': True, 'true': True, 'on': True,
         '0': False, 'no': False, 'false': False, 'off': False}
 
-    def __init__(self, conf, ctx, paths):
-        self._conf = conf
+    def __init__(self, ctx, paths):
         self._ctx = ctx
         self._paths = paths
         # A flag which indicates whether input tuple '(conf, env, arg)' are
@@ -401,11 +400,11 @@ class SectionFetch(object):
         arg = values[2]
         if arg and not isinstance(arg, str):
             return arg
-        f = self._Func(self._conf, self._ctx, self._paths)
+        f = self._Func(self._ctx, self._paths)
         return f(option, values)
 
     def _get_funcname(self, option):
-        f = self._Func(self._conf, self._ctx, self._paths)
+        f = self._Func(self._ctx, self._paths)
         return f._get_funcname(option)
 
     def get(self, option, fallback=_UNSET):
