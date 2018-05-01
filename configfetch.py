@@ -164,7 +164,7 @@ class Func(object):
         if self._is_single_value:
             return values
         self._is_single_value = True
-        conf, env, arg = values
+        arg, env, conf = values
         return arg or env or conf
 
     def _get_funcname(self, option):
@@ -386,9 +386,9 @@ class SectionFetch(object):
             return os.environ[env]
 
     def _get_values(self, option):
-        return [self._get_conf(option),
+        return [self._get_arg(option),
                 self._get_env(option),
-                self._get_arg(option)]
+                self._get_conf(option)]
 
     def __getattr__(self, option):
         values = self._get_values(option)
@@ -397,7 +397,7 @@ class SectionFetch(object):
     def _convert(self, option, values):
         # args may have non-string value (from ``ArgumentParser``).
         # Although not recommended, it returns it as is (not raising Error).
-        arg = values[2]
+        arg = values[0]
         if arg and not isinstance(arg, str):
             return arg
         f = self._Func(self._ctx, self._paths)
@@ -455,7 +455,7 @@ class Double(object):
     def _get_plus_value(self, option):
         parent_val = self.parent_sec._get_conf(option, fallback=None)
         values = self.sec._get_values(option)
-        values = [parent_val] + values
+        values = values + [parent_val]
         return _get_plusminus_values(values)
 
     def get(self, option, fallback=_UNSET):
@@ -493,7 +493,7 @@ def _get_plusminus_values(adjusts, initial=None):
     """
     values = initial if initial else []
 
-    for adjust in adjusts:
+    for adjust in reversed(adjusts):
         if not adjust:
             continue
         if not isinstance(adjust, str):
