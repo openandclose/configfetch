@@ -578,8 +578,9 @@ def minusadapter(parser, matcher=None, args=sys.argv[1:]):
         return args
 
     actions = []
+    classes= (argparse._StoreAction, argparse._AppendAction)
     for a in parser._actions:
-        if isinstance(a, argparse._StoreAction):
+        if isinstance(a, classes):
             if a.nargs in (1, None):
                 for opt in a.option_strings:
                     if matcher:

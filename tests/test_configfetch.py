@@ -327,7 +327,7 @@ class TestMinusAdapter:
 
         # Minus with AppendAction
         args = ['--dd', '-dddd', '--xx', '-xxxx', '--bb']
-        new_args = ['--dd', '-dddd', '--xx=-xxxx', '--bb']
+        new_args = ['--dd=-dddd', '--xx=-xxxx', '--bb']
         self.compare(args, new_args)
 
         # Minus, short option version
