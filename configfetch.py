@@ -228,10 +228,10 @@ class ConfigLoad(object):
         parser = kwargs.pop('parser', configparser.ConfigParser)
         use_dash = kwargs.pop('use_dash', True)
         use_uppercase = kwargs.pop('use_uppercase', True)
-        optionfmt = self._optionfmt(use_dash, use_uppercase)
+        optionxform = self._optionxform(use_dash, use_uppercase)
 
         config = parser(*args, **kwargs)
-        config.optionxform = optionfmt
+        config.optionxform = optionxform
         if os.path.exists(cfile):
             with open(cfile) as f:
                 config.read_file(f)
@@ -253,14 +253,14 @@ class ConfigLoad(object):
         self._config = config
         self._ctxs = ctxs
 
-    def _optionfmt(self, use_dash, use_uppercase):
-        def _fmt(option):
+    def _optionxform(self, use_dash, use_uppercase):
+        def _xform(option):
             if use_dash:
                 option = option.replace('-', '_')
             if not use_uppercase:
                 option = option.lower()
             return option
-        return _fmt
+        return _xform
 
     def _parse_format(self, section, option, ctx):
         value = section[option]
