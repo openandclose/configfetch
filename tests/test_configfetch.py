@@ -193,9 +193,9 @@ class TestParseConfig:
         conf = fetch(data)
         assert conf.sec1.aa == ['--aaa', '-b', 'ccc cc', 'ddd,dd']
 
-    def test_conf_path(self):
-        data = j(['[sec1]', 'aa = [=PATH] {USER}/data/my.css'])
-        conf = fetch(data, paths={'USER': '/home/john'})
+    def test_conf_fmt(self):
+        data = j(['[sec1]', 'aa = [=FMT] {USER}/data/my.css'])
+        conf = fetch(data, fmts={'USER': '/home/john'})
         assert conf.sec1.aa == '/home/john/data/my.css'
 
 

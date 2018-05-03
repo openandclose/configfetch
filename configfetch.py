@@ -93,9 +93,9 @@ class Func(object):
         '1': True, 'yes': True, 'true': True, 'on': True,
         '0': False, 'no': False, 'false': False, 'off': False}
 
-    def __init__(self, ctx, paths):
+    def __init__(self, ctx, fmts):
         self._ctx = ctx
-        self._paths = paths
+        self._fmts = fmts
 
     @register
     def _bool(self, value):
@@ -133,16 +133,16 @@ class Func(object):
         return shlex.split(value, comments='#')
 
     @register
-    def _path(self, value):
+    def _fmt(self, value):
         """Evaluate part of value, similar to `str.format`.
 
         Modify ``{USER}/data/my.css`` to e.g. ``/home/john/data/my.css``,
-        according to ``paths`` dictionary.
+        according to ``fmts`` dictionary.
         Blank string ('') returns blank string.
 
         It needs more improvement.
         """
-        return value.format(**self._paths)
+        return value.format(**self._fmts)
 
     @register
     def _plus(self, value):
@@ -294,10 +294,10 @@ class ConfigFetch(object):
     """
 
     def __init__(self, config, ctxs=None,
-            paths=None, args=None, envs=None, Func=Func):
+            fmts=None, args=None, envs=None, Func=Func):
         self._config = config
         self._ctxs = ctxs or {}
-        self._paths = paths or {}
+        self._fmts = fmts or {}
         self._args = args or argparse.Namespace()
         self._envs = envs or {}
         self._Func = Func
@@ -323,7 +323,7 @@ class ConfigFetch(object):
             ctx = self._ctxs[self._ctxs.default_section]
 
         s = SectionFetch(
-            self, section, ctx, self._paths, self._Func)
+            self, section, ctx, self._fmts, self._Func)
         self._cache[section] = s
         return s
 
@@ -345,12 +345,12 @@ class SectionFetch(object):
     Also access `ArgumentParser` and environment variables.
     """
 
-    def __init__(self, conf, section, ctx, paths, Func):
+    def __init__(self, conf, section, ctx, fmts, Func):
         self._conf = conf
         self._config = conf._config
         self._section = section
         self._ctx = ctx
-        self._paths = paths
+        self._fmts = fmts
         self._Func = Func
 
         # 'ConfigParser.__contains__()' includes default section.
@@ -412,7 +412,7 @@ class SectionFetch(object):
         return f._get_funcname(option)
 
     def _get_func(self):
-        return self._Func(self._ctx, self._paths, self._conf._storage)
+        return self._Func(self._ctx, self._fmts)
 
     def get(self, option, fallback=_UNSET):
         try:
@@ -481,7 +481,7 @@ class Double(object):
         return self.sec.__iter__()
 
 
-def fetch(cfile, *, paths=None, args=None, envs=None, Func=Func,
+def fetch(cfile, *, fmts=None, args=None, envs=None, Func=Func,
         parser=configparser.ConfigParser,
         use_dash=True, use_uppercase=True, **kwargs):
     """Fetch custom configuration.
@@ -491,7 +491,7 @@ def fetch(cfile, *, paths=None, args=None, envs=None, Func=Func,
     """
     config, ctxs = ConfigLoad(cfile=cfile, parser=parser,
             use_dash=use_dash, use_uppercase=use_uppercase)()
-    conf = ConfigFetch(config, ctxs, paths, args, envs, Func)
+    conf = ConfigFetch(config, ctxs, fmts, args, envs, Func)
     return conf
 
 
