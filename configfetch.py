@@ -404,12 +404,15 @@ class SectionFetch(object):
         if arg not in (_UNSET, None):
             if not isinstance(arg, str):
                 return arg
-        f = self._Func(self._ctx, self._paths)
+        f = self._get_func()
         return f(option, values)
 
     def _get_funcname(self, option):
-        f = self._Func(self._ctx, self._paths)
+        f = self._get_func()
         return f._get_funcname(option)
+
+    def _get_func(self):
+        return self._Func(self._ctx, self._paths, self._conf._storage)
 
     def get(self, option, fallback=_UNSET):
         try:
