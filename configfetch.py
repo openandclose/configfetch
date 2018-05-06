@@ -444,17 +444,15 @@ class Double(object):
             return self._get_value(option)
 
     def _get_value(self, option):
-        parent_val = self.parent_sec._get_conf(
-            option, convert=True, fallback=None)
-        val = self.sec.get(option, fallback=None)
-        # Exclude ``False``
-        if val in (None, '', []):
+        try:
+            val = self.sec.get(option)
+        except NoOptionError:
+            parent_val = self.parent_sec.get(option)
             return parent_val
-        else:
-            return val
+        return val
 
     def _get_plus_value(self, option):
-        parent_val = self.parent_sec._get_conf(option, fallback=None)
+        parent_val = self.parent_sec._get_conf(option)
         values = self.sec._get_values(option)
         values = values + [parent_val]
         self._check_unset(values, option, self.sec._ctx.name)
