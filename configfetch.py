@@ -39,6 +39,8 @@ class NoOptionError(Error, configparser.NoOptionError):
 
     Just wrapping `configparser` one.
     """
+    def __init__(self, option, section):
+        super().__init__(option, section)
 
 
 def register(meth):
