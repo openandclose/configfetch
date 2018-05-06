@@ -94,26 +94,20 @@ class Func(object):
     def __init__(self, ctx, paths):
         self._ctx = ctx
         self._paths = paths
-        # A flag which indicates whether input tuple '(conf, env, arg)' are
-        # already processed to get one argument or not.
-        self._is_single_value = False
 
     @register
-    def _bool(self, values):
+    def _bool(self, value):
         # It is the same as `ConfigParser`'s ``_convert_to_boolean``.
-        value = self._get_value(values)
         if value.lower() not in self.BOOLEAN_STATES:
             raise ValueError('Not a boolean: %s' % value)
         return self.BOOLEAN_STATES[value.lower()]
 
     @register
-    def _comma(self, values):
-        value = self._get_value(values)
+    def _comma(self, value):
         return _parse_comma(value)
 
     @register
-    def _line(self, values):
-        value = self._get_value(values)
+    def _line(self, value):
         return _parse_line(value)
 
     @register
@@ -133,12 +127,11 @@ class Func(object):
             return ''
 
     @register
-    def _cmd(self, values):
-        value = self._get_value(values)
+    def _cmd(self, value):
         return shlex.split(value, comments='#')
 
     @register
-    def _path(self, values):
+    def _path(self, value):
         """Evaluate part of value, similar to `str.format`.
 
         Modify ``{USER}/data/my.css`` to e.g. ``/home/john/data/my.css``,
@@ -147,25 +140,29 @@ class Func(object):
 
         It needs more improvement.
         """
-        value = self._get_value(values)
         return value.format(**self._paths)
 
     @register
-    def _plus(self, values):
+    def _plus(self, value):
         """Implement ``plusminus option`` (my neologism).
 
         Main logic is in `_get_plusminus_values`.
         Presuppose values are not processed.
         """
-        self._is_single_value = True
+        values = self.values
         return _get_plusminus_values(values)
 
     def _get_value(self, values):
-        if self._is_single_value:
-            return values
-        self._is_single_value = True
         arg, env, conf = values
-        return arg or env or conf
+        if arg not in (_UNSET, None):
+            value = arg
+        elif env not in (_UNSET, ''):
+            value = env
+        elif conf is not _UNSET:
+            value = conf
+        else:
+            value = _UNSET
+        return value
 
     def _get_funcname(self, option):
         funcdict = _func_dict(_REGISTRY)
@@ -181,16 +178,20 @@ class Func(object):
         funcnames = self._get_funcname(option)
         return [getattr(self, fn) for fn in funcnames]
 
-    def _format_value(self, values, func):
+    def _format_value(self, option, values, func):
+        value = self._get_value(values)
+        if value is _UNSET:
+            raise NoOptionError(option, self._ctx.name)
         if not func:
-            return self._get_value(values)
+            return value
         for f in func:
-            values = f(values)
-        return values
+            value = f(value)
+        return value
 
     def __call__(self, option, values):
         func = self._get_func(option)
-        value = self._format_value(values, func)
+        self.values = values
+        value = self._format_value(option, values, func)
         return value
 
 
@@ -365,18 +366,16 @@ class SectionFetch(object):
         try:
             value = self._config.get(section, option)
         except configparser.NoOptionError:
-            if fallback is _UNSET:
-                raise NoOptionError(option, section)
-            else:
-                return fallback
+            return fallback
 
         if convert:
-            value = self._convert(option, (value, None, None))
+            value = self._convert(option, (value, _UNSET, _UNSET))
         return value
 
     def _get_arg(self, option):
         if self._conf._args and option in self._conf._args:
             return getattr(self._conf._args, option)
+        return _UNSET
 
     def _get_env(self, option):
         env = None
@@ -384,6 +383,7 @@ class SectionFetch(object):
             env = self._conf._envs[option]
         if env and env in os.environ:
             return os.environ[env]
+        return _UNSET
 
     def _get_values(self, option):
         return [self._get_arg(option),
@@ -398,8 +398,9 @@ class SectionFetch(object):
         # args may have non-string value (from ``ArgumentParser``).
         # Although not recommended, it returns it as is (not raising Error).
         arg = values[0]
-        if arg and not isinstance(arg, str):
-            return arg
+        if arg not in (_UNSET, None):
+            if not isinstance(arg, str):
+                return arg
         f = self._Func(self._ctx, self._paths)
         return f(option, values)
 
@@ -456,6 +457,7 @@ class Double(object):
         parent_val = self.parent_sec._get_conf(option, fallback=None)
         values = self.sec._get_values(option)
         values = values + [parent_val]
+        self._check_unset(values, option, self.sec._ctx.name)
         return _get_plusminus_values(values)
 
     def get(self, option, fallback=_UNSET):
@@ -466,6 +468,10 @@ class Double(object):
                 raise
             else:
                 return fallback
+
+    def _check_unset(self, values, section, option):
+        if all([value is _UNSET for value in values]):
+            raise NoOptionError(section, option)
 
     def __iter__(self):
         return self.sec.__iter__()
@@ -494,7 +500,8 @@ def _get_plusminus_values(adjusts, initial=None):
     values = initial if initial else []
 
     for adjust in reversed(adjusts):
-        if not adjust:
+        # if not adjust:
+        if adjust in (_UNSET, None, '', []):
             continue
         if not isinstance(adjust, str):
             fmt = 'Each input should be a string. Got %r(%r)'
