@@ -23,7 +23,7 @@ class Error(Exception):
 
     `configparser` has 11 custom Exceptions scattered in 14 methods
     last time I checked.
-    This module only wraps a few related ones.
+    I'm not going to wrap except the most relevant ones.
     """
 
 
@@ -118,7 +118,7 @@ class Func(object):
 
         Presupose that 'value' is a list,
         already processed by other functions.
-        Blank strings list (like '['', ' ', '  ']') evaluates to ''.
+        Blank strings list (like ['', ' ', '  ']) evaluates to ''.
         """
         if not isinstance(value, list):
             msg = "'configfetch.Func._bar()' accepts only 'list'. Got %r"
@@ -331,6 +331,7 @@ class ConfigFetch(object):
         try:
             return self.__getattr__(section)
         except NoSectionError:
+            # follows dictionary's ``.get()``
             return None
 
     def __iter__(self):
