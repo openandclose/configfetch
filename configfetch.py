@@ -152,7 +152,7 @@ class Func(object):
         Presuppose values are not processed.
         """
         values = self.values
-        return _get_plusminus_values(values)
+        return _get_plusminus_values(reversed(values))
 
     def _get_value(self, values):
         arg, env, conf = values
@@ -462,7 +462,7 @@ class Double(object):
         values = self.sec._get_values(option)
         values = values + [parent_val]
         self._check_unset(values, option, self.sec._ctx.name)
-        return _get_plusminus_values(values)
+        return _get_plusminus_values(reversed(values))
 
     def get(self, option, fallback=_UNSET):
         try:
@@ -503,7 +503,7 @@ def _get_plusminus_values(adjusts, initial=None):
     """
     values = initial if initial else []
 
-    for adjust in reversed(adjusts):
+    for adjust in adjusts:
         # if not adjust:
         if adjust in (_UNSET, None, '', []):
             continue
