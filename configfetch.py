@@ -39,6 +39,7 @@ class NoOptionError(Error, configparser.NoOptionError):
 
     Just wrapping `configparser` one.
     """
+
     def __init__(self, option, section):
         super().__init__(option, section)
 
@@ -589,7 +590,7 @@ def minusadapter(parser, matcher=None, args=sys.argv[1:]):
         return args
 
     actions = []
-    classes= (argparse._StoreAction, argparse._AppendAction)
+    classes = (argparse._StoreAction, argparse._AppendAction)
     for a in parser._actions:
         if isinstance(a, classes):
             if a.nargs in (1, None):
