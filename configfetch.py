@@ -1,8 +1,5 @@
 
-"""Make special `ConfigParser` object.
-
-With value conversion registration and `ArgumentParser` override.
-"""
+"""Helper to get values from configparser and argparse."""
 
 import argparse
 import configparser
@@ -19,26 +16,20 @@ _REGISTRY = set()
 
 
 class Error(Exception):
-    """Base Exception class fot the module.
+    """Base Exception class for the module.
 
-    `configparser` has 11 custom Exceptions scattered in 14 methods
+    ``configparser`` has 11 custom Exceptions scattered in 14 methods
     last time I checked.
     I'm not going to wrap except the most relevant ones.
     """
 
 
 class NoSectionError(Error, configparser.NoSectionError):
-    """Raised when no section is found.
-
-    Just wrapping `configparser` one.
-    """
+    """Raised when no section is found."""
 
 
 class NoOptionError(Error, configparser.NoOptionError):
-    """Raised when no option is found.
-
-    Just wrapping `configparser` one.
-    """
+    """Raised when no option is found."""
 
     def __init__(self, option, section):
         super().__init__(option, section)
@@ -53,7 +44,7 @@ def register(meth):
 def _func_dict(registry):
     """Make a dictionary with uppercase keys.
 
-    e.g. ``_comma`` to ``{'COMMA': '_comma'}``
+    E.g. ``_comma`` to ``{'COMMA': '_comma'}``
     """
     return {func.lstrip('_').upper(): func for func in registry}
 
@@ -62,8 +53,10 @@ def _func_regex(registry):
     r"""Make regex expression to parse conversion syntax.
 
     Custom option format is e.g. ``users = [=COMMA] alice, bob, charlie``.
-    We parse '[=COMMA]', strip this, record ``option -> conversion`` set.
-    So e.g. ``['_comma', '_bar']`` changes to ``(?:[=(COMMA)]|[=(BAR)])\s*``.
+    We parse '[=COMMA]', strip this, record ``option -> conversion`` map.
+
+    So e.g. ``['_comma', '_bar']`` should change to
+    ``(?:[=(COMMA)]|[=(BAR)])\s*``.
     """
     formats = _func_dict(registry).keys()
     formats = '|'.join([r'\[=(' + fmt + r')\]' for fmt in formats])
@@ -75,20 +68,18 @@ def _parse_comma(value):
     if value:
         return [val.strip()
                 for val in value.split(',') if val.strip()] or []
-    else:
-        return []
+    return []
 
 
 def _parse_line(value):
     if value:
         return [val.strip(' ,')
                 for val in value.split('\n') if val.strip()] or []
-    else:
-        return []
+    return []
 
 
 class Func(object):
-    """Implement value conversion logic."""
+    """Register and apply value conversions."""
 
     BOOLEAN_STATES = {
         '1': True, 'yes': True, 'true': True, 'on': True,
@@ -135,13 +126,11 @@ class Func(object):
 
     @register
     def _fmt(self, value):
-        """Evaluate part of value, similar to `str.format`.
+        """Evaluate part of value, using `str.format`.
 
         Modify ``{USER}/data/my.css`` to e.g. ``/home/john/data/my.css``,
         according to ``fmts`` dictionary.
         Blank string ('') returns blank string.
-
-        It needs more improvement.
         """
         return value.format(**self._fmts)
 
@@ -207,17 +196,17 @@ class ConfigLoad(object):
     You can pass ``parser``'s keyword argumants in initializing.
     additional arguments are:
 
-    :param cfile: custom ini format file
+    :param cfile: custom ini format filename or string
     :param parser: returned object by `__call__`,
         configparser.ConfigParser (default) or similar object
 
-    Furthermore, if you use this class for `ConfigFetch`,
+    Furthermore, if you use this class for ``ConfigFetch``,
     small parser customizetions are needed.
 
     * If you use dot access (e.g. ``obj.attribute``),
       'dash' must be changed to 'underscore',
       to make the key to identifier.
-    * Default `configparser` converts all option names to lowercase.
+    * Default ``configparser`` converts all option names to lowercase.
       Disable this, for ``ArgumentParser`` might use uppercases.
 
     :param use_dash: default True (changes dashes to underscores internally)
@@ -240,7 +229,7 @@ class ConfigLoad(object):
             config.read_string(cfile)
 
         # ctxs(contexts) is also a ConfigParser object, not just a dictionary,
-        # because of `default_section` handling.
+        # because of ``default_section`` handling.
         ctxs = configparser.ConfigParser(
             default_section=config.default_section)
         ctxs.optionxform = config.optionxform
@@ -289,7 +278,7 @@ class ConfigLoad(object):
 
 
 class ConfigFetch(object):
-    """`ConfigParser` proxy object with dot access.
+    """``ConfigParser`` proxy object with dot access.
 
     Actual work is delegated to `SectionFetch`.
     """
@@ -309,11 +298,14 @@ class ConfigFetch(object):
 
     # TODO:
     # Invalidate section names this class reserves.
+
     # cf.
     # >>> for a in dir(c.fetch('')): print(a)
-    # Somehow
+
+    # cf.
     # >>> for m in inspect.getmembers(c.fetch('')): print(m)
-    # got ``configfetch.NoSectionError: No section: '__bases__'``
+    # got the error somehow
+    # ``configfetch.NoSectionError: No section: '__bases__'``
     def __getattr__(self, section):
         if section in self._cache:
             return self._cache[section]
@@ -340,10 +332,10 @@ class ConfigFetch(object):
 
 
 class SectionFetch(object):
-    """`ConfigParser` section proxy object.
+    """``ConfigParser`` section proxy object.
 
-    Similar to `ConfigParser` proxy object itself.
-    Also access `ArgumentParser` and environment variables.
+    Similar to ``ConfigParser``'s proxy object itself.
+    Also access ``ArgumentParser`` arguments and environment variables.
     """
 
     def __init__(self, conf, section, ctx, fmts, Func):
@@ -399,8 +391,8 @@ class SectionFetch(object):
         return self._convert(option, values)
 
     def _convert(self, option, values):
-        # args may have non-string value (from ``ArgumentParser``).
-        # Although not recommended, it returns it as is (not raising Error).
+        # ``arg`` may have non-string value.
+        # it returns it as is (not raising Error).
         arg = values[0]
         if arg not in (_UNSET, None):
             if not isinstance(arg, str):
@@ -424,7 +416,7 @@ class SectionFetch(object):
             else:
                 return fallback
 
-    # Involve no reverse formatting.
+    # Note it does not do any reverse-formatting.
     def set_value(self, option, value):
         section = self._get_section(option)
         self._config.set(section, option, value)
@@ -434,9 +426,9 @@ class SectionFetch(object):
 
 
 class Double(object):
-    """A utility class to parse two differnet ``SectionFetch`` objects.
+    """A utility class to parse two ``SectionFetch`` objects.
 
-    To supply some secion an additional external section to option-fallbacks.
+    To supply some secion an additional external section fallback.
     """
 
     def __init__(self, sec, parent_sec):
@@ -485,10 +477,9 @@ class Double(object):
 def fetch(cfile, *, fmts=None, args=None, envs=None, Func=Func,
         parser=configparser.ConfigParser,
         use_dash=True, use_uppercase=True, **kwargs):
-    """Fetch custom configuration.
+    """Fetch ``ConfigFetch`` object.
 
-    It is a convenience function
-    for the basic use of `ConfigLoad` and `ConfigFetch`.
+    It is a convenience function for the basic use of the library.
     """
     config, ctxs = ConfigLoad(cfile=cfile, parser=parser,
             use_dash=use_dash, use_uppercase=use_uppercase)()
@@ -497,10 +488,9 @@ def fetch(cfile, *, fmts=None, args=None, envs=None, Func=Func,
 
 
 def _get_plusminus_values(adjusts, initial=None):
-    """Parse values specially (used by `_plus`).
+    """Add or sbtract values partially (used by ``_plus()``).
 
-    To implemant partial value setting in a list
-    using ``+`` and ``-`` as addition and subtraction marker.
+    Use ``+`` and ``-`` as the markers.
     """
     values = initial if initial else []
 
@@ -533,14 +523,10 @@ def _get_plusminus_values(adjusts, initial=None):
 
 
 def minusadapter(parser, matcher=None, args=sys.argv[1:]):
-    """Parse and edit commandline arguments list.
+    """Parse and edit commandline arguments.
 
-    A supplement function not so closely related to the module.
-
-    It unites two arguments to one,
-    if the first is ``argparse._StoreAction``,
-    and requires exactly one argument (``nargs`` is 1 or None),
-    and the second begins with ``'-'``.
+    An accessory helper function.
+    It unites two arguments to one, if the second argument starts with ``-``.
 
     | e.g. ``['--aa', '-somearg']`` becomes ``['--aa=-somearg']``.
     | e.g. ``['-a', '-somearg']`` becomes ``['-a-somearg']``.
@@ -551,17 +537,8 @@ def minusadapter(parser, matcher=None, args=sys.argv[1:]):
     And `_plus` uses this type of arguments frequantly.
 
     :param parser: ArgumentParser object
-    :param matcher: regex string to filter options
-    :param args: arguments list, defaults to sys.argv[1:]
-
-    Usage:
-    When we use ``argparse``, in general,
-
-    | 1. We first build ``ArgumentParser`` object,
-      using ``add_argument`` etc..
-    | 2. Next we parse actual arguments, using ``parse_args`` etc..
-
-    Call this function before 2., and use returned list to pass to 2.
+    :param matcher: regex string to match options
+    :param args: arguments list to parse
     """
     def _iter_args(args, actions):
         args = iter(args)

@@ -20,7 +20,7 @@ setup(
     license='MIT',
     author='Open Close',
     author_email='openandclose23@gmail.com',
-    description='Wrapper to get values from configparser and argparse',
+    description='Helper to get values from configparser and argparse',
     long_description=readme,
     classifiers=[
         'Development Status :: 3 - Alpha',
