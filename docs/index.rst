@@ -2,15 +2,10 @@
 Configfetch documentation
 =========================
 
-It is a Wrapper to get values from `configparser` and `argparse`.
-
-.. note::
-
-    The document is not yet written. Sorry for the inconvinience.
-
+Helper to get values from `configparser` and `argparse`.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    Overview <overview>
