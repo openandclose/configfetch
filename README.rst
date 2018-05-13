@@ -15,4 +15,6 @@ For details, see `documentation <http://configfetch.readthedocs.io/>`__.
 License
 -------
 
-The software is licensed under The MIT License. See `LICENSE <LICENSE>`__.
+The software is licensed under The MIT License. See `LICENSE`_.
+
+.. _LICENSE: https://github.com/openandclose/configfetch/blob/master/LICENSE
