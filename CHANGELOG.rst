@@ -3,6 +3,13 @@ Changelog
 =========
 
 
+v0.0.7
+------
+
+* Fixed a few mistakes around ``setup.py`` (for pypi).
+  No changes in the code.
+
+
 v0.0.6
 ------
 
