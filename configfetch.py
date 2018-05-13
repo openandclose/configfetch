@@ -522,7 +522,7 @@ def _get_plusminus_values(adjusts, initial=None):
     return values
 
 
-def minusadapter(parser, matcher=None, args=sys.argv[1:]):
+def minusadapter(parser, matcher=None, args=None):
     """Parse and edit commandline arguments.
 
     An accessory helper function.
@@ -538,7 +538,7 @@ def minusadapter(parser, matcher=None, args=sys.argv[1:]):
 
     :param parser: ArgumentParser object
     :param matcher: regex string to match options
-    :param args: arguments list to parse
+    :param args: arguments list to parse, defaults to ``sys.argv[1:]``
     """
     def _iter_args(args, actions):
         args = iter(args)
@@ -577,4 +577,5 @@ def minusadapter(parser, matcher=None, args=sys.argv[1:]):
                             continue
                     actions.append(opt)
 
+    args = args if args else sys.argv[1:]
     return list(_iter_args(args, actions))
