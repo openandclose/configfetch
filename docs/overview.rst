@@ -182,8 +182,8 @@ So ``ArgumentParser`` arguments that convert the value type
 are just passed through.
 
 
-ArgumentParser Detals
-^^^^^^^^^^^^^^^^^^^^^
+ArgumentParser Details
+^^^^^^^^^^^^^^^^^^^^^^
 
 Normally is is better not to supply
 ``default`` argument of ``ArgumentParser.add_argument()``.
@@ -278,7 +278,7 @@ The first function must accept raw string value (initial ``value``)
 as its ``value`` argument.
 
 The second function and after may define any value type
-for it's ``value`` argument.
+for its ``value`` argument.
 
 But what actually comes as ``value`` is, of course,
 dependent on the previous function.
@@ -703,7 +703,7 @@ minusadapter()
 
 .. code:: python
 
-    function minusadapter(parser, matcher=None, args=sys.argv[1:])
+    function minusadapter(parser, matcher=None, args=None)
 
 *parser*
     ArgumentParser object, already ``actions`` registered.
@@ -716,7 +716,7 @@ minusadapter()
 
 *args*
     commandline arguments list. It defaults to ``sys.argv[1:]``,
-    as ``argparse`` does.
+    as ``argparse`` does (when it is ``None``).
 
 It is an accessory helper function.
 
@@ -751,6 +751,7 @@ Conditions:
     * if the argument is a registered argument,
     * if it's ``action`` is either ``store`` or ``append``,
     * if it's ``nargs`` is ``1`` or ``None``,
+    * and if the next argument starts with ``'-'``,
 
 Rules:
     * long option is combined with the next argument with ``=``.
