@@ -60,7 +60,7 @@ def _func_regex(registry):
     """
     formats = _func_dict(registry).keys()
     formats = '|'.join([r'\[=(' + fmt + r')\]' for fmt in formats])
-    formats = '\s*(?:' + formats + ')\s*'
+    formats = r'\s*(?:' + formats + r')\s*'
     return re.compile(formats)
 
 
