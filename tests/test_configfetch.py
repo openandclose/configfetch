@@ -284,6 +284,39 @@ class TestCustomize:
 
 class TestDouble:
 
+    def test_nooptionerror_nooptionerror(self):
+        data = j(['[sec1]', 'aa = xxx'])
+        conf1 = fetch(data)
+        data = j(['[sec1]', 'aa = yyy'])
+        conf2 = fetch(data)
+        double = configfetch.Double(conf2.sec1, conf1.sec1)
+        with pytest.raises(configfetch.NoOptionError):
+            assert double.bb == 'zzz'
+
+    def test_nooptionerror_blankvalue(self):
+        data = j(['[sec1]', 'aa = xxx'])
+        conf1 = fetch(data)
+        data = j(['[sec1]', 'bb ='])
+        conf2 = fetch(data)
+        double = configfetch.Double(conf2.sec1, conf1.sec1)
+        assert double.bb == ''
+
+    def test_blankvalue_nooptionerror(self):
+        data = j(['[sec1]', 'bb ='])
+        conf1 = fetch(data)
+        data = j(['[sec1]', 'aa = yyy'])
+        conf2 = fetch(data)
+        double = configfetch.Double(conf2.sec1, conf1.sec1)
+        assert double.bb == ''
+
+    def test_blankvalue_blankvalue(self):
+        data = j(['[sec1]', 'bb ='])
+        conf1 = fetch(data)
+        data = j(['[sec1]', 'bb = [=COMMA]'])
+        conf2 = fetch(data)
+        double = configfetch.Double(conf2.sec1, conf1.sec1)
+        assert double.bb == ''
+
     def test_plus(self):
         data = j(['[sec1]', 'aa = [=PLUS] xxx, yyy'])
         conf1 = fetch(data)
