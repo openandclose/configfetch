@@ -3,6 +3,12 @@ Changelog
 =========
 
 
+v0.0.8
+------
+
+* Fixed a grave bug in Double.
+  Child blank value had been overwriting parent value.
+
 v0.0.7
 ------
 
