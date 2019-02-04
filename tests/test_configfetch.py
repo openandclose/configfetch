@@ -326,6 +326,36 @@ class TestDouble:
         assert double.aa == ['xxx']
 
 
+class TestGetPlusMinusValues:
+
+    initial = ['aaa', 'bbb', 'ccc']
+
+    def compare(self, adjusts, initial, expected):
+        values = configfetch._get_plusminus_values(adjusts, initial)
+        assert values == expected
+
+    def test_adjusts_argument(self):
+        args = (['ddd'], None, ['ddd'])
+        self.compare(*args)
+        args = (['+ddd'], None, ['ddd'])
+        self.compare(*args)
+        args = (['-bbb'], None, [])
+        self.compare(*args)
+
+        args = (['ddd'], self.initial, ['ddd'])
+        self.compare(*args)
+        args = (['+ddd'], self.initial, ['aaa', 'bbb', 'ccc', 'ddd'])
+        self.compare(*args)
+        args = (['-bbb'], self.initial, ['aaa', 'ccc'])
+        self.compare(*args)
+
+        args = (['-aaa, -bbb'], self.initial, ['ccc'])
+        self.compare(*args)
+        args = (['-aaa, +ddd, +eee'], self.initial,
+            ['bbb', 'ccc', 'ddd', 'eee'])
+        self.compare(*args)
+
+
 class TestMinusAdapter:
 
     parser = argparse.ArgumentParser()

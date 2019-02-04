@@ -614,6 +614,9 @@ so it should come the second or after.
     Adding existing items, or subtracting nonexistant items doesn't cause errors.
     It just ignores them.
 
+    (Internally, the list is converted to (a kind of) ordered ``set``.
+    So duplicate items are discarded).
+
     Example:
 
     .. code::
