@@ -9,23 +9,6 @@ import configfetch
 fetch = configfetch.fetch
 j = '\n'.join
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-a', '--aa')
-parser.add_argument('-b', '--bb')
-parser.add_argument('-c', '--cc', action='store_const', default='', const='yes')
-parser.add_argument('-d', '--no-cc', action='store_const', const='no', dest='cc')
-parser.add_argument('-e', '--ee-eee')
-
-
-def getargs(cmd):
-    return parser.parse_args(cmd)
-
-
-class CustomFunc(configfetch.Func):
-
-    @configfetch.register
-    def _custom(self, value):
-        return 'test'
 
 
 class TestInheritance:
@@ -237,41 +220,58 @@ class TestConfigParser:
 
 class TestArgparse:
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--aa')
+    parser.add_argument('-b', '--bb')
+    parser.add_argument('-c', '--cc', action='store_const', default='', const='yes')
+    parser.add_argument('-d', '--no-cc', action='store_const', const='no', dest='cc')
+    parser.add_argument('-e', '--ee-eee')
+
+    def get_args(self, cmd):
+        return self.parser.parse_args(cmd)
+
     def test_args_and_conf(self):
         data = j(['[sec1]', 'aa = xxx'])
-        args = getargs(['--aa', 'axxx'])
+        args = self.get_args(['--aa', 'axxx'])
         conf = fetch(data, args=args)
         assert conf.sec1.aa == 'axxx'
 
     def test_args_and_conf_short(self):
         data = j(['[sec1]', 'aa = xxx'])
-        args = getargs(['-a', 'axxx'])
+        args = self.get_args(['-a', 'axxx'])
         conf = fetch(data, args=args)
         assert conf.sec1.aa == 'axxx'
 
     def test_args_and_conf_none(self):
         data = j(['[sec1]', 'aa = xxx'])
-        args = getargs([])
+        args = self.get_args([])
         conf = fetch(data, args=args)
         assert conf.sec1.aa == 'xxx'
 
     def test_args_and_conf_const(self):
         data = j(['[sec1]', 'cc = [=BOOL]'])
-        args = getargs(['--cc'])
+        args = self.get_args(['--cc'])
         conf = fetch(data, args=args)
         assert conf.sec1.cc is True
 
     def test_args_and_conf_const_false(self):
         data = j(['[sec1]', 'cc = [=BOOL] true'])
-        args = getargs(['--no-cc'])
+        args = self.get_args(['--no-cc'])
         conf = fetch(data, args=args)
         assert conf.sec1.cc is False
 
     def test_args_and_conf_dash(self):
         data = j(['[sec1]', 'ee_eee = xxx'])
-        args = getargs(['-e', 'axxx'])
+        args = self.get_args(['-e', 'axxx'])
         conf = fetch(data, args=args)
         assert conf.sec1.ee_eee == 'axxx'
+
+
+class CustomFunc(configfetch.Func):
+
+    @configfetch.register
+    def _custom(self, value):
+        return 'test'
 
 
 class TestCustomize:
