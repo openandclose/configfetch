@@ -3,6 +3,13 @@ Changelog
 =========
 
 
+v0.0.9
+------
+
+* Added Python3.7
+
+* Fixed _plus function (with a minute spec change).
+
 v0.0.8
 ------
 
