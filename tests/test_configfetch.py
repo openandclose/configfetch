@@ -176,6 +176,11 @@ class TestParseConfig:
         conf = fetch(data)
         assert conf.sec1.aa == ['--aaa', '-b', 'ccc cc', 'ddd,dd']
 
+    def test_conf_cmds(self):
+        data = j(['[sec1]', 'aa = [=COMMA][=CMDS] ls *.txt, find . "aaa"'])
+        conf = fetch(data)
+        assert conf.sec1.aa == [['ls', '*.txt'], ['find', '.', 'aaa']]
+
     def test_conf_fmt(self):
         data = j(['[sec1]', 'aa = [=FMT] {USER}/data/my.css'])
         conf = fetch(data, fmts={'USER': '/home/john'})

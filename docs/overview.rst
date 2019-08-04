@@ -572,6 +572,12 @@ so it should come the second or after.
     Note it uses `shlex.split <https://docs.python.org/3/library/shlex.html#shlex.split>`__,
     with ``comments='#'``.
 
+.. method:: _cmds(value)
+
+    return a list of list of commandline ready strings.
+
+    The input value is a list of strings, with each item made to a list by _cmd.
+
 .. method:: _fmt(value)
 
     return a string processed by ``str.format``, using ``fmts`` dictionary.
