@@ -193,7 +193,7 @@ class Func(object):
         return value
 
 
-class ConfigLoad(object):
+class ConfigFetch(object):
     """A custom Configuration builder.
 
     Read from custom config file with some additional information
@@ -219,37 +219,39 @@ class ConfigLoad(object):
     :param use_uppercase: default True
     """
 
-    def __init__(self, *args, **kwargs):
-        cfile = kwargs.pop('cfile', None)
-        parser = kwargs.pop('parser', configparser.ConfigParser)
-        use_dash = kwargs.pop('use_dash', True)
-        use_uppercase = kwargs.pop('use_uppercase', True)
-        optionxform = self._optionxform(use_dash, use_uppercase)
+    def __init__(self, *, fmts=None, args=None, envs=None, Func=Func,
+            parser=configparser.ConfigParser,
+            use_dash=True, use_uppercase=True, **kwargs):
+        self._fmts = fmts or {}
+        self._args = args or argparse.Namespace()
+        self._envs = envs or {}
+        self._Func = Func
+        self._parser = parser
+        self._cache = {}
 
-        config = parser(*args, **kwargs)
+        optionxform = self._get_optionxform(use_dash, use_uppercase)
+
+        config = parser(**kwargs)
         config.optionxform = optionxform
-        if os.path.exists(cfile):
-            with open(cfile) as f:
-                config.read_file(f)
-        else:
-            config.read_string(cfile)
 
         # ctxs(contexts) is also a ConfigParser object, not just a dictionary,
         # because of ``default_section`` handling.
         ctxs = configparser.ConfigParser(
             default_section=config.default_section)
         ctxs.optionxform = config.optionxform
-        for secname, section in config.items():
-            if not secname == ctxs.default_section:
-                ctxs.add_section(secname)
-            ctx = ctxs[secname]
-            for option in section:
-                self._parse_format(section, option, ctx)
 
         self._config = config
         self._ctxs = ctxs
 
-    def _optionxform(self, use_dash, use_uppercase):
+    def read_file(self, f, format=None):
+        self._config.read_file(f)
+        self._check_and_parse_config(format)
+
+    def read_string(self, string, format=None):
+        self._config.read_string(string)
+        self._check_and_parse_config(format)
+
+    def _get_optionxform(self, use_dash, use_uppercase):
         def _xform(option):
             if use_dash:
                 option = option.replace('-', '_')
@@ -258,7 +260,23 @@ class ConfigLoad(object):
             return option
         return _xform
 
-    def _parse_format(self, section, option, ctx):
+    def _check_and_parse_config(self, format):
+        if format is None:
+            if len(self._ctxs._sections) == 0:
+                format = 'fini'
+        if format == 'fini':
+            self._parse_config()
+
+    def _parse_config(self):
+        ctxs = self._ctxs
+        for secname, section in self._config.items():
+            if not secname == ctxs.default_section:
+                ctxs.add_section(secname)
+            ctx = ctxs[secname]
+            for option in section:
+                self._parse_option(section, option, ctx)
+
+    def _parse_option(self, section, option, ctx):
         value = section[option]
         func_regex = _func_regex(_REGISTRY)
 
@@ -279,29 +297,6 @@ class ConfigLoad(object):
             # so option values must be a string.
             ctx[option] = ','.join(func)
 
-    def __call__(self):
-        return self._config, self._ctxs
-
-
-class ConfigFetch(object):
-    """``ConfigParser`` proxy object with dot access.
-
-    Actual work is delegated to `SectionFetch`.
-    """
-
-    def __init__(self, config, ctxs=None,
-            fmts=None, args=None, envs=None, Func=Func):
-        self._config = config
-        self._ctxs = ctxs or {}
-        self._fmts = fmts or {}
-        self._args = args or argparse.Namespace()
-        self._envs = envs or {}
-        self._Func = Func
-        self._cache = {}
-
-        # shortcut
-        self.read = self._config.read
-
     # TODO:
     # Invalidate section names this class reserves.
 
@@ -312,6 +307,7 @@ class ConfigFetch(object):
     # >>> for m in inspect.getmembers(c.fetch('')): print(m)
     # got the error somehow
     # ``configfetch.NoSectionError: No section: '__bases__'``
+
     def __getattr__(self, section):
         if section in self._cache:
             return self._cache[section]
@@ -492,16 +488,22 @@ class Double(object):
         return self.sec.__iter__()
 
 
-def fetch(cfile, *, fmts=None, args=None, envs=None, Func=Func,
+def fetch(file_or_string, *, encoding=None,
+        fmts=None, args=None, envs=None, Func=Func,
         parser=configparser.ConfigParser,
         use_dash=True, use_uppercase=True, **kwargs):
     """Fetch ``ConfigFetch`` object.
 
     It is a convenience function for the basic use of the library.
     """
-    config, ctxs = ConfigLoad(cfile=cfile, parser=parser,
-            use_dash=use_dash, use_uppercase=use_uppercase)()
-    conf = ConfigFetch(config, ctxs, fmts, args, envs, Func)
+    conf = ConfigFetch(fmts=fmts, args=args, envs=envs, Func=Func,
+        parser=parser, use_dash=use_dash, use_uppercase=use_uppercase)
+
+    if os.path.isfile(file_or_string):
+        with open(file_or_string, encoding=encoding) as f:
+            conf.read_file(f)
+    else:
+        conf.read_string(file_or_string)
     return conf
 
 
