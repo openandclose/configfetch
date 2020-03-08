@@ -133,7 +133,7 @@ Section
 ^^^^^^^
 
 In the first access on ``conf``,
-a section representation object (``SectionFetch``) is returned.
+a section representation object (``SectionProxy``) is returned.
 ``args`` and ``envs`` are not involved.
 
     ``dot access`` (``.__getattr__(section)``)
@@ -146,7 +146,7 @@ a section representation object (``SectionFetch``) is returned.
 Option
 ^^^^^^
 
-In the option access (the first access on ``SectionFetch``),
+In the option access (the first access on ``SectionProxy``),
 ``args``, ``envs``, and the section ``section`` are searched in order,
 and the first valid one is *selected* (but not yet *returned*).
 
@@ -438,15 +438,15 @@ Example:
     conf = ConfigFetch(config, ctxs, args=args)
 
 
-SectionFetch
+SectionProxy
 ^^^^^^^^^^^^
 
 .. code:: python
 
-    class configfetch.SectionFetch(conf, section, ctx, fmts, Func)
+    class configfetch.SectionProxy(conf, section, ctx, fmts, Func)
 
 In the first ``dot access`` on an ``ConfigFetch`` object,
-what actually returns is a proxy object called ``SectionFetch``.
+what actually returns is a proxy object called ``SectionProxy``.
 The mechanism is the same as ``ConfigParser``,
 and users normally don't have to think about them.
 
@@ -460,7 +460,7 @@ Example:
     >>> conf
     <configfetch.ConfigFetch object at 0x1234567890ab>
     >>> conf.main
-    <configfetch.SectionFetch object at 0x567890abcdef>
+    <configfetch.SectionProxy object at 0x567890abcdef>
     >>> conf.main.gui
     False
 
@@ -685,10 +685,10 @@ Double
     class Double(sec, parent_sec)
 
 *sec*
-    ``SectionFetch`` object.
+    ``SectionProxy`` object.
 
 *parent_sec*
-    ``SectionFetch`` object to fallback.
+    ``SectionProxy`` object to fallback.
 
 It is an accessory helper class.
 

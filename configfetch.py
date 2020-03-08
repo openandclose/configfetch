@@ -317,7 +317,7 @@ class ConfigFetch(object):
         else:
             ctx = self._ctxs[self._ctxs.default_section]
 
-        s = SectionFetch(
+        s = SectionProxy(
             self, section, ctx, self._fmts, self._Func)
         self._cache[section] = s
         return s
@@ -333,7 +333,7 @@ class ConfigFetch(object):
         return self._config.__iter__()
 
 
-class SectionFetch(object):
+class SectionProxy(object):
     """``ConfigParser`` section proxy object.
 
     Similar to ``ConfigParser``'s proxy object itself.
@@ -428,7 +428,7 @@ class SectionFetch(object):
 
 
 class Double(object):
-    """A utility class to parse two ``SectionFetch`` objects.
+    """A utility class to parse two ``SectionProxy`` objects.
 
     To supply some secion an additional external section fallback.
     """
