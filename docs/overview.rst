@@ -2,45 +2,21 @@
 Overview
 ========
 
-To read and prepare miscellaneous configuration data is the common process
-that most commandline scripts have to handle,
-and there are many libraries which try to facilitate that,
-extending python `argparse <https://docs.python.org/3/library/argparse.html>`__
-or `configparser <https://docs.python.org/3/library/configparser.html>`__ somewhat.
+The library provides a custom ``INI`` format,
+which registers optional conversion functions for each option value.
 
-This is one of them.
+When getting value, they are applied.
 
-The characteristics are:
+Commandline arguments and Environment Variables precedes config file values,
+in that order.
 
-* I chose ``configparser`` extension path.
-  So it can only handle ``INI`` format.
-
-* But it also parses a customized ``INI`` format with one extension,
-  to register value conversion functions for each option fields.
-
-* So that the using scripts can provide, in a static file,
-  actual data (application defaults) and data definitions at the same time.
-  (this is the point, how humble it is.)
-
-* All data accesses are done by ``dot access`` or ``.get()`` method.
-
-* Config file data are automatically
-  overridden by environment variables,
-  which are overridden by commandline arguments.
-
----
-
-Let's call the customized ``INI`` format
-as ``fetch-INI`` or ``FINI`` format.
-And let's differentiate
-the resulting custom config object, using the word ``conf``,
-as opposed to the ordinary ConfigParser-like object ``config``.
+All data accesses are done by ``dot access`` or ``.get()`` method.
 
 
 Installation
 ------------
 
-It is a single file Python module, with no other library dependency.
+It is a single file Python module, with no other external library dependency.
 
 Only **Python 3.5 and above** are supported. ::
 
@@ -50,58 +26,44 @@ Only **Python 3.5 and above** are supported. ::
 Usage
 -----
 
-.. code:: python
+.. code:: none
 
     ## myapp.ini
     [main]
-    gui=        [=BOOL] no
+    log=        [=BOOL] no
     users=      [=COMMA] Alice, Bob, Charlie
-    filetype=   html
+    output=     html
 
     # terminal
     >>> import configfetch
     >>> conf = configfetch.fetch('myapp.ini')
-    >>> conf.main.gui
+    >>> conf.main.log
     False
     >>> conf.main.users
     ['Alice', 'Bob', 'Charlie']
-    >>> conf.filetype
+    >>> conf.output
     'html'
 
-As you see,
-the ``FINI`` file has optional ``[=SOMETHING]`` notations
+The file has optional ``[=SOMETHING]`` notations
 before each option value,
 which registers ``_something()`` function for this particular option.
 
-When you parse ``FINI`` definition files,
-you can use ``.fetch()`` convenience function like here.
+Let's call this customized format as ``Fetch-INI`` or ``FINI`` format.
 
-After that, following config files should be written
-in ordinary ``INI`` format (user configs).
-
-Only ``.read()`` is exposed.
-But ``conf`` keeps ordinary ``INI`` ``ConfigParser`` object as ``._config``
-(stripped of ``[=SOMETHING]`` parts),
-so you can use other read methods if you want.
-
-.. code:: python
-
-    >>> conf.read('user.ini')
-    >>> conf._config.read_string('[main]\ngui=yes')
+Let's call this new configuration object as ``conf``,
+as opposed to ``config``, the original ``INI`` configuration object.
 
 
 Limitations
 -----------
 
-
 *Manual Arguments Building*
 
 While the script can *parse* commandline arguments automatically,
-it is the same before, in that
+it is the same as before, in that
 you have to manually register each argument with ``ArgumentParser``, e.g.::
 
-    parser.add_argument('--filetype')
-
+    parser.add_argument('--output')
 
 *ConfigParser.converters*
 
@@ -120,6 +82,30 @@ functions can't accept arguments other than
 miscellaneous internal config values.
 So they need some workarounds in that case.
 (e.g. create custom functions with arguments already internalized.)
+
+
+API Overview
+------------
+
+The main constructs of this module are:
+
+class ``ConfigFetch``
+    Read config files, and behave as a ``conf`` data object.
+
+    See `API <#configfetch>`__ for details.
+
+class ``Func``
+    Keep conversion functions and apply them to values.
+
+    See `Func <api.html#configfetch.Func>`__ for the builtin Functions.
+
+    See `User Functions <#user-functions>`__ for customization.
+
+function ``fetch``
+    Shortcut. Using ``ConfigFetch``, return ``conf`` object.
+
+    See `API <#fetch>`__ for details.
+
 
 Value Selection
 ---------------
@@ -193,50 +179,45 @@ Either the value in the commandline, or the default value.
 Also take note that ``store_true`` and ``store_false`` actions
 default to ``False`` and ``True`` respectively.
 They are always selected, and in their case, always returned.
-(above Nonstring rule).
+(above ``Nonstring`` rule).
 
 If this is not desirable, use ``store_const`` instead. E.g.::
 
-    parser.add_argument('--gui', action='store_const', const='true')
+    parser.add_argument('--log', action='store_const', const='true')
 
-(Cf. Paul Jacobson (hpaulj) discourages
-``store_true`` and ``store_false`` in a different context. See
-`Python argparse --toggle --no-toggle flag
-<https://stackoverflow.com/a/34750557>`__.)
+.. note ::
+
+    Paul Jacobson (hpaulj), active in ``argparse`` development,  discourages
+    ``store_true`` and ``store_false`` in a different context. See
+    `a stackoverflow <https://stackoverflow.com/a/34750557>`__.)
 
 In most cases, you can delegate conversion to ``conf``,
 by conforming to the designated ``FINI`` format. E.g.
 
-.. code::
+.. code:: none
 
     # myapp.ini
     file=   [COMMA] a.txt, b.txt, c.txt
 
-.. code:: python
-
+    # myapp.py
     parser.add_argument('--file', action='store')
 
-.. code-block:: console
-
+    # terminal
     $ myapp.py --file 'a.txt, b.txt, c.txt'
 
 instead of:
 
-.. code:: python
+.. code:: none
 
     parser.add_argument('--file', action='store', nargs='+')
-
-.. code-block:: console
 
     $ myapp.py --file a.txt b.txt c.txt
 
 or:
 
-.. code:: python
+.. code:: none
 
     parser.add_argument('--file', action='append')
-
-.. code-block:: console
 
     $ myapp.py --file a.txt --file b.txt --file c.txt
 
@@ -257,9 +238,9 @@ Function
 
 Function names must start with ``'_'``.
 
-The matching string is made from stripping this ``'_'``,
-and converting to uppercase. E.g.
-``_something()`` to ``[=SOMETHING]``.
+The matching string is made from one in ``FINI`` file,
+adding this ``'_'``, and converting to lowercase. E.g.
+``[=SOMETHING]`` to ``_something``.
 
 Functions always have one argument ``value``, that is a *selected* value.
 And they return one value.
@@ -268,7 +249,7 @@ or is used as the ``value`` of the next function, if any.
 
 Functions can also access ``values``,
 the original three elements list before selection (``[arg, env, opt]``).
-Use ``Func.values`` or ``self.values`` attribute.
+Use ``Func.values`` attribute.
 
 
 Concatenation
@@ -287,223 +268,10 @@ So in general users should follow the concatenation rules
 each function expects.
 
 
-Structure
----------
-
-The main constructs of this module are:
-
-class ``ConfigLoad``
-    load ``FINI`` format file,
-    and create ordinary ``INI`` data object
-    and corresponding context (option-function map) object.
-    Both are actually ``config`` objects.
-
-class ``ConfigFetch``
-    from above two objects, create actual ``conf`` interface object.
-
-class ``Func``
-    keep conversion functions and apply them to values.
-
-    When user want to create new functions, use this class.
-
-function ``fetch()``
-    shortcut. Using ``ConfigLoad`` and ``ConfigFetch``,
-    create actual ``conf`` object.
-
-
-ConfigLoad
-^^^^^^^^^^
-
-.. code:: python
-
-    class configfetch.ConfigLoad(
-        *args, cfile=None, parser=configparser.ConfigParser,
-        use_dash=True, use_uppercase=True, **kwargs)
-
-It accepts (hopefully)
-all ``configparser.ConfigParser.__init__()`` arguments.
-And some keyword arguments are added.
-
-*cfile*
-    the name of ``FINI`` format file, or literal string to read (required).
-
-*parser*
-    ``ConfigParser`` like object to actually generate ``INI`` format object.
-    Default is ``configparser.ConfigParser``.
-
-*use_dash*
-    Default is ``True``.
-    This module uses ``dot access`` for all section and option lookup,
-    so you have to choose their names as valid identifiers
-    (``[a-zA-Z_][a-zA-Z0-9_]+``).
-    Additionally, dash (``'-'``) can be used for options,
-    by converting it to underline (``'_'``) internally,
-    if this argument is ``True``.
-
-    Note ``argparse`` does this for its own arguments,
-    E.g. ``--user-agent`` in commandline is already converted
-    in parsed object (``args.user_agent``).
-    So ``configfetch`` doesn't have to do anything for this.
-    And if ``use_dash`` is ``True``, you can use option name
-    ``user-agent`` in addition.
-
-*use_uppercase*
-    Default is ``True``.
-    ``INI`` format is derived from Windows,
-    and by ``ConfigParser`` default,
-    option names are not case sensitive.
-    If this argument is ``True``,
-    make them case sensitive.
-    (We are integrating it to commandline arguments,
-    which has some use cases for capital letters.)
-
-.. method:: __call__()
-
-    return ``config`` data object and context object.
-
-In initialization, ``ConfigLoad`` creates a temporary ``config`` object,
-using ``parser.read(cfile)`` or ``parser.read_string(cfile)``.
-And then analyzing the object, it creates
-ordinary ``INI`` ``config`` object
-and corresponding context object. E.g. approximately::
-
-    {'main': {'gui': '[=BOOL] no'}}
-
-becomes ::
-
-    {'main': {'gui': 'no'}}  # config data object
-
-and ::
-
-    {'main': {'gui': '_bool'}}  # context object
-
-Example:
-
-.. code:: python
-
-    loader = ConfigLoad(cfile='myapp.ini')
-    config, ctxs = loader()
-
-
-ConfigFetch
-^^^^^^^^^^^
-
-.. code:: python
-
-    class configfetch.ConfigFetch(config, ctxs=None,
-        fmts=None, args=None, envs=None, Func=Func):
-
-Initialization returns a config data object with ``dot access`` lookup
-(``conf`` object).
-
-*config*
-    config data object (required).
-
-*ctxs*
-    corresponding context object.
-
-Above two arguments are supposed to be provided by ``ConfigLoad``.
-
-*fmts*
-    dictionary used by conversion function ``_fmt()``.
-    See `_fmt() <#_fmt>`__.
-
-*args*
-    ``argparse`` ``Namespace`` object to override data in ``config``.
-
-*env*
-    dictionary in which keys are config option names
-    and values are environment variable names to override.
-
-    So no automatic retrieval mechanism is provided.
-    You have to assign them manually. E.g.::
-
-        {'gui': 'MYAPP_GUI'}
-
-*Func*
-    Function registration object,
-    either default one the module provides, or user customized one.
-
-Example:
-
-.. code:: python
-
-    import argparse
-    parser = argparse.ArgumentParser()
-    [...]
-    args = parser.parse_args()
-
-    loader = ConfigLoad(cfile='myapp.ini')
-    config, ctxs = loader()
-    conf = ConfigFetch(config, ctxs, args=args)
-
-
-SectionProxy
-^^^^^^^^^^^^
-
-.. code:: python
-
-    class configfetch.SectionProxy(conf, section, ctx, fmts, Func)
-
-In the first ``dot access`` on an ``ConfigFetch`` object,
-what actually returns is a proxy object called ``SectionProxy``.
-The mechanism is the same as ``ConfigParser``,
-and users normally don't have to think about them.
-
-Initialization, with appropriate arguments, is done automatically
-when a section is first accessed from ``ConfigFetch`` object.
-
-Example:
-
-.. code:: python
-
-    >>> conf
-    <configfetch.ConfigFetch object at 0x1234567890ab>
-    >>> conf.main
-    <configfetch.SectionProxy object at 0x567890abcdef>
-    >>> conf.main.gui
-    False
-
-
-fetch()
-^^^^^^^
-
-.. code:: python
-
-    function configfetch.fetch(cfile, *,
-        fmts=None, args=None, envs=None, Func=Func,
-        parser=configparser.ConfigParser,
-        use_dash=True, use_uppercase=True, **kwargs):
-
-A convenience function, actually doing the same thing
-as the ``ConfigFetch`` example above.
-Return a config data object (``conf``).
-
-The meaning of arguments are the same as ``ConfigLoad`` and ``ConfigFetch``.
-
-Example:
-
-.. code:: python
-
-    conf = fetch('myapp.ini', args=args)
-
-Func
-^^^^
-
-.. code:: python
-
-    class configfetch.Func(ctx, fmts)
-
-The meaning of arguments are the same as ``ConfigFetch``.
-In ordinary cases,
-instance initialization is only done by ``ConfigFetch`` internally,
-so user doesn't have to think about these arguments.
-
-
 Builtin Functions
-^^^^^^^^^^^^^^^^^
+-----------------
 
-All builtin functions except ``_bar()``, expect initial string ``value``,
+All builtin functions except ``_bar()``, expect ``value`` as a string,
 so they should come in first.
 
 ``_bar()`` expects an list type ``value``,
@@ -522,7 +290,7 @@ so it should come the second or after.
 
 .. method:: _comma(value)
 
-    return a list using comma as separaters.
+    Return a list using comma as separators.
     No comma value returns one element list.
     Blank value returns a blank list (``[]``).
 
@@ -531,7 +299,7 @@ so it should come the second or after.
 
 .. method:: _line(value)
 
-    return a list using line break as separaters.
+    Return a list using line break as separators.
     No line break value returns one element list.
     Blank value returns a blank list (``[]``).
 
@@ -540,43 +308,48 @@ so it should come the second or after.
 
 .. method:: _bar(value)
 
-    receive a list as ``value`` and return a concatenated string with bar (``'|'``) between them.
-    One element list returns that element (``string``).
-    Blank list returns ``''``. E.g.
+    Concatenate with bar (``'|'``).
+
+    Receive a list of strings as ``value``, return a string.
+
+    One element list returns that element.
+    Blank list returns ``''``.
 
     .. code::
 
-            scheme=     [=COMMA][=BAR] https?, ftp, mailto
+        scheme=     [=COMMA][=BAR] https?, ftp, mailto
 
     .. code:: python
 
-            >>> conf.main.scheme
-            'https?|ftp|mailto'
+        >>> conf.main.scheme
+        'https?|ftp|mailto'
 
 .. method:: _cmd(value)
 
-    return a list ready to put in `subprocess <https://docs.python.org/3/library/subprocess.html>`__.
+    Return a list of strings
+    ready to put in `subprocess <https://docs.python.org/3/library/subprocess.html>`__.
 
-    That means the end users can write strings as they type in a terminal,
-    which, when processed by ``subprocess``, run corresponding commnad. E.g.
+    Users have to quote whitespaces as they do in a terminal.
+
+    Note ``'#'`` and after are comments, they are discarded.
+
+    Example:
 
     .. code::
 
-            command=    [=CMD] ls -l 'Live at the Apollo'
+        command=    [=CMD] ls -l 'Live at the Apollo' # 1968
 
     .. code:: python
 
-            >>> conf.main.command
-            ['ls', '-l', 'Live at the Apollo']
-
-    Note it uses `shlex.split <https://docs.python.org/3/library/shlex.html#shlex.split>`__,
-    with ``comments='#'``.
+        >>> conf.main.command
+        ['ls', '-l', 'Live at the Apollo']
 
 .. method:: _cmds(value)
 
-    return a list of list of commandline ready strings.
+    Return a list of list of strings.
 
-    The input value is a list of strings, with each item made to a list by _cmd.
+    List version of ``_cmd``.
+    The input value is a list of strings, with each item made to a list by ``_cmd``.
 
 .. method:: _fmt(value)
 
@@ -612,16 +385,13 @@ so it should come the second or after.
     1) It makes a list using the same mechanism as ``_comma()``.
     2) If items in the list are all ``normal items``,
        then the list overwrites the previous list.
-    3) If they consist only of ``plus items`` and ``minus items``,
+    3) If they consist only of ``plus items`` or ``minus items``,
        then it adds ``plus items`` to,
        and subtracts ``minus items`` from, the previous list.
     4) Otherwise (mixing cases), it raises error.
 
     Adding existing items, or subtracting nonexistant items doesn't cause errors.
     It just ignores them.
-
-    (Internally, the list is converted to (a kind of) ordered ``set``.
-    So duplicate items are discarded).
 
     Example:
 
@@ -635,7 +405,7 @@ so it should come the second or after.
 
 
 User Functions
-^^^^^^^^^^^^^^
+--------------
 
 When registering user functions,
 
@@ -677,101 +447,72 @@ Example:
     '*python*'
 
 
+API
+---
+
+ConfigFetch
+^^^^^^^^^^^
+
+.. autoclass:: configfetch.ConfigFetch
+    :members:
+
+Note:
+
+You can select custom ``ConfigParser`` object for ``_config``,
+by argument ``parser``,
+but ``_ctxs`` is hard-coded to use an ordinary ``ConfigParser``.
+It may interfere with something.
+
+Regardless of ``use_dash`` argument, ``argparse`` does this
+dash-to-underscore conversion for their own argument names.
+So it is normally better to keep it ``True``,
+and maintain correspondence.
+
+
+fetch
+^^^^^
+
+.. autofunction:: configfetch.fetch
+
 Double
 ^^^^^^
 
+.. autoclass:: configfetch.Double
+
+Example:
+
 .. code:: python
-
-    class Double(sec, parent_sec)
-
-*sec*
-    ``SectionProxy`` object.
-
-*parent_sec*
-    ``SectionProxy`` object to fallback.
-
-It is an accessory helper class.
-
-Default section is a useful feature of ``INI`` format,
-but it is always global and unconditional.
-Sometimes more fine-tuned one is needed.
-For example, a section may want to look up a related section
-when no option is found.
-In that case, use this class. E.g::
 
     conf.japanese = Double(conf.japanese, conf.asian)
 
 When the option is not found even in the parent section,
-What happens is determined by the global environment
-(``conf``, or more exactly ``conf._config``),
-most likely the Default section will be looked up.
+DEFAULT section lookup is performed, or ``NoOptionError``,
+according to the uniderlined ``ConfigParser`` object
+(``conf._config``).
 
 
 minusadapter()
 ^^^^^^^^^^^^^^
 
-.. code:: python
-
-    function minusadapter(parser, matcher=None, args=None)
-
-*parser*
-    ArgumentParser object, already ``actions`` registered.
-
-*matcher*
-    regex string to match options.
-
-    Only matched options are checked for edit.
-    When it is ``None``, All options are checked (default).
-
-*args*
-    commandline arguments list. It defaults to ``sys.argv[1:]``,
-    as ``argparse`` does (when it is ``None``).
-
-It is an accessory helper function.
-
-One problem of ``argparse`` is
-when required arguments begin with ``prefix_chars``.
-For example, if ``--file`` requires one argument::
-
-    --file -myfile.txt
-
-raises error, because it always search prefixed words first,
-and assign them as option designating strings.
-(So it thinks ``--file`` doesn't have a required argument,
-and ``-m`` has one concatenated argument ``'yfile.txt'``,
-if ``-m`` is registered.).
-
-This is different from most traditional unix software.
-For the details, see:
-
-* `<https://bugs.python.org/issue9334>`__
-* `<https://stackoverflow.com/a/21894384>`__
-
-It is troublesome for us
-because when employing `_plus <#_plus>`__ function,
-we use this type of arguments frequently.
-
-In that case, one solution is to use this ``minusadapter``.
-It parses commandline arguments, and checking ``ArgumentParser`` object,
-rewrites them suitably.
+.. autofunction:: configfetch.minusadapter
 
 Conditions:
-    * if ``prefix_chars`` is exactly ``'-'``,
-    * if the argument is a registered argument,
-    * if it's ``action`` is either ``store`` or ``append``,
-    * if it's ``nargs`` is ``1`` or ``None``,
-    * and if the next argument starts with ``'-'``,
+  * ``prefix_chars`` is exactly ``'-'``
+  * The argument is a registered argument
+  * It's ``action`` is either ``store`` or ``append``
+  * It's ``nargs`` is ``1`` or ``None``
+  * The next argument starts with ``'-'``
 
-Rules:
-    * long option is combined with the next argument with ``=``.
-    * short option is simply concatenated with the next argument. E.g.:
+Process:
+  * long option is combined with the next argument with ``=``
+  * short option is concatenated with the next argument
 
 .. code::
 
     ['--file', '-myfile.txt']  -->  ['--file=-myfile.txt']
     ['-f', '-myfile.txt']      -->  ['-f-myfile.txt']
 
-How to use:
+Example:
 
 .. code:: python
 
@@ -789,5 +530,3 @@ How to use:
     $ myapp.py --file -myfile.txt
     Namespace(file='-myfile.txt')
 
-Note it is not a general solution for the above ``argparse`` problem.
-It just makes ``_plus()`` function marginally usable.

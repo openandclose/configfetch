@@ -9,7 +9,8 @@ Helper to get values from `configparser` and `argparse`.
    :caption: Contents:
 
    Overview <overview>
-   API <api>
+
+.. API <api>
 
 
 Indices and tables

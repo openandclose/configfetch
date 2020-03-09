@@ -19,8 +19,8 @@ _REGISTRY = set()
 class Error(Exception):
     """Base Exception class for the module.
 
-    ``configparser`` has 11 custom Exceptions scattered in 14 methods
-    last time I checked.
+    ``configparser`` has 11 custom Exceptions scattered in 14 methods,
+    the last time I checked.
     I'm not going to wrap except the most relevant ones.
     """
 
@@ -45,19 +45,15 @@ def register(meth):
 def _func_dict(registry):
     """Make a dictionary with uppercase keys.
 
-    E.g. ``_comma`` to ``{'COMMA': '_comma'}``
+    ``_comma`` -> ``{'COMMA': '_comma'}``
     """
     return {func.lstrip('_').upper(): func for func in registry}
 
 
 def _func_regex(registry):
-    r"""Make regex expression to parse conversion syntax.
+    r"""Make regex expression to parse custom ``INI`` (``FINI``) syntax.
 
-    Custom option format is e.g. ``users = [=COMMA] alice, bob, charlie``.
-    We parse '[=COMMA]', strip this, record ``option -> conversion`` map.
-
-    So e.g. ``['_comma', '_bar']`` should change to
-    ``(?:[=(COMMA)]|[=(BAR)])\s*``.
+    ``['_comma', '_bar']`` -> ``(?:[=(COMMA)]|[=(BAR)])\s*``.
     """
     formats = _func_dict(registry).keys()
     formats = '|'.join([r'\[=(' + fmt + r')\]' for fmt in formats])
@@ -80,9 +76,12 @@ def _parse_line(value):
 
 
 class Func(object):
-    """Register and apply value conversions."""
+    """Register and apply value conversions.
 
-    BOOLEAN_STATES = {
+    Normally always initialized and called from main classes internally.
+    """
+
+    BOOLEAN_STATES = {  # the same as ConfigParser.BOOLEAN_STATES
         '1': True, 'yes': True, 'true': True, 'on': True,
         '0': False, 'no': False, 'false': False, 'off': False}
 
@@ -92,7 +91,6 @@ class Func(object):
 
     @register
     def _bool(self, value):
-        # It is the same as `ConfigParser`'s ``_convert_to_boolean``.
         if value.lower() not in self.BOOLEAN_STATES:
             raise ValueError('Not a boolean: %s' % value)
         return self.BOOLEAN_STATES[value.lower()]
@@ -107,11 +105,9 @@ class Func(object):
 
     @register
     def _bar(self, value):
-        """Connect values with ``bar`` (``'|'``).
+        """Concatenate with bar (``'|'``).
 
-        Presupose that 'value' is a list,
-        already processed by other functions.
-        Blank strings list (like ['', ' ', '  ']) evaluates to ''.
+        Receive a list of strings as ``value``, return a string.
         """
         if not isinstance(value, list):
             msg = "'configfetch.Func._bar()' accepts only 'list'. Got %r"
@@ -123,6 +119,7 @@ class Func(object):
 
     @register
     def _cmd(self, value):
+        """Return a list of strings, useful for ``subprocess`` (stdlib)."""
         return shlex.split(value, comments='#')
 
     @register
@@ -132,12 +129,7 @@ class Func(object):
 
     @register
     def _fmt(self, value):
-        """Evaluate part of value, using `str.format`.
-
-        Modify ``{USER}/data/my.css`` to e.g. ``/home/john/data/my.css``,
-        according to ``fmts`` dictionary.
-        Blank string ('') returns blank string.
-        """
+        """Return a string processed by ``str.format``."""
         return value.format(**self._fmts)
 
     @register
@@ -194,29 +186,38 @@ class Func(object):
 
 
 class ConfigFetch(object):
-    """A custom Configuration builder.
+    """A custom Configuration object.
 
-    Read from custom config file with some additional information
-    and launch ConfigParser.
+    It keeps two ``ConfigParser`` object (``_config`` and ``_ctxs``).
 
-    You can pass ``parser``'s keyword argumants in initializing.
-    additional arguments are:
+    ``_config`` is an ordinary one.
+    ``_ctxs`` is one which keeps function names for each option.
+    Option access returns a value already functions applied.
 
-    :param cfile: custom ini format filename or string
-    :param parser: returned object by `__call__`,
-        configparser.ConfigParser (default) or similar object
+    It also has ``argparse.Namespace`` object (args),
+    and Environment variable dictionay (envs).
 
-    Furthermore, if you use this class for ``ConfigFetch``,
-    small parser customizetions are needed.
+    They are global, having no concept of sections.
+    If the option name counterpart is defined,
+    their value precedes the config value.
 
-    * If you use dot access (e.g. ``obj.attribute``),
-      'dash' must be changed to 'underscore',
-      to make the key to identifier.
-    * Default ``configparser`` converts all option names to lowercase.
-      Disable this, for ``ArgumentParser`` might use uppercases.
 
-    :param use_dash: default True (changes dashes to underscores internally)
-    :param use_uppercase: default True
+    The class ``__init__`` should accept
+    all ``ConfigParser.__init__`` keyword arguments.
+    The class specific argumants are:
+
+    :param fmts: dictionay ``Func._fmt`` uses
+    :param args: ``argparse.Namespace`` object,
+        already commandline arguments parsed
+    :param envs: dictionary with Environment Variable name and value
+        as key and value
+    :param Func: ``Func`` or subclasses, keep actual functions
+    :param parser: ``ConfigParser`` or subclasses,
+        keep actual config data
+    :param use_dash: if True, you can use dashes for option names
+        (change dashes to underscores Internally)
+    :param use_uppercase: if True, option names are case sensitive.
+        (usuful if commandline wants to use case sensitive argument names)
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None, Func=Func,
@@ -244,10 +245,35 @@ class ConfigFetch(object):
         self._ctxs = ctxs
 
     def read_file(self, f, format=None):
+        """Read config from an opened file object.
+
+        :param f: a file object
+        :param format: 'fini', 'ini' or ``None``
+
+        If ``format`` is 'fini',
+        read config values, and function definitions ([=SOMETHING]).
+        Previous definitions are overwritten, if any.
+
+        If ``format`` is 'ini' (or actually any other string than 'fini'),
+        read only config values, definitions are kept intact.
+
+        If ``format`` is ``None`` (default),
+        only when the definitions dict (``_ctxs``) is blank,
+        read the file as 'fini'
+        (supposed to be the first time read).
+        Otherwise read the file as 'ini'.
+        """
         self._config.read_file(f)
         self._check_and_parse_config(format)
 
     def read_string(self, string, format=None):
+        """Read config from a string.
+
+        :param string: a string
+        :param format: 'fini', 'ini' or ``None``
+
+        The meaning of ``format`` is the same as ``.read_file``.
+        """
         self._config.read_string(string)
         self._check_and_parse_config(format)
 
@@ -270,7 +296,7 @@ class ConfigFetch(object):
     def _parse_config(self):
         ctxs = self._ctxs
         for secname, section in self._config.items():
-            if not secname == ctxs.default_section:
+            if secname not in ctxs:  # not in sections and default_section
                 ctxs.add_section(secname)
             ctx = ctxs[secname]
             for option in section:
@@ -299,14 +325,8 @@ class ConfigFetch(object):
 
     # TODO:
     # Invalidate section names this class reserves.
-
     # cf.
-    # >>> for a in dir(c.fetch('')): print(a)
-
-    # cf.
-    # >>> for m in inspect.getmembers(c.fetch('')): print(m)
-    # got the error somehow
-    # ``configfetch.NoSectionError: No section: '__bases__'``
+    # >>> set(dir(configfetch.fetch(''))) - set(dir(object()))
 
     def __getattr__(self, section):
         if section in self._cache:
@@ -334,10 +354,9 @@ class ConfigFetch(object):
 
 
 class SectionProxy(object):
-    """``ConfigParser`` section proxy object.
+    """``ConfigFetch`` section proxy object.
 
-    Similar to ``ConfigParser``'s proxy object itself.
-    Also access ``ArgumentParser`` arguments and environment variables.
+    Similar to ``ConfigParser``'s proxy object.
     """
 
     def __init__(self, conf, section, ctx, fmts, Func):
@@ -428,9 +447,17 @@ class SectionProxy(object):
 
 
 class Double(object):
-    """A utility class to parse two ``SectionProxy`` objects.
+    """Supply a parent section to fallback, before 'DEFAULT'.
 
-    To supply some secion an additional external section fallback.
+    An accessory helper class,
+    not so related to this module's main concern.
+
+    Default section is a useful feature of ``INI`` format,
+    but it is always global and unconditional.
+    Sometimes more fine-tuned one is needed.
+
+    :param sec: ``SectionProxy`` object
+    :param parent_sec: ``SectionProxy`` object to fallback
     """
 
     def __init__(self, sec, parent_sec):
@@ -495,6 +522,15 @@ def fetch(file_or_string, *, encoding=None,
     """Fetch ``ConfigFetch`` object.
 
     It is a convenience function for the basic use of the library.
+    Most arguments are the same as ``ConfigFetch.__init__``.
+
+    the specific arguments are:
+
+    :param file_or_string: a filename to open
+        if the name is in system path, or a string
+    :param encoding: encoding to use when openning the name
+
+    Files are read with ``format=None``.
     """
     conf = ConfigFetch(fmts=fmts, args=args, envs=envs, Func=Func,
         parser=parser, use_dash=use_dash, use_uppercase=use_uppercase)
@@ -512,9 +548,8 @@ def _get_plusminus_values(adjusts, initial=None):
 
     Use ``+`` and ``-`` as the markers.
 
-    Internally, the values list is converted to ``OrderedDict`` keys,
-    with each dict value is ``None``,
-    used as a substitute for 'Ordered Set'.
+    :param adjusts: lists of values to process in order
+    :param initial: initial values (list) to add or subtract further
     """
     def _fromkeys(keys):
         return OrderedDict.fromkeys(keys)
@@ -550,22 +585,25 @@ def _get_plusminus_values(adjusts, initial=None):
 
 
 def minusadapter(parser, matcher=None, args=None):
-    """Parse and edit commandline arguments.
+    """Edit ``option_arguments`` with leading dashes.
 
     An accessory helper function.
-    It unites two arguments to one, if the second argument starts with ``-``.
-
-    | e.g. ``['--aa', '-somearg']`` becomes ``['--aa=-somearg']``.
-    | e.g. ``['-a', '-somearg']`` becomes ``['-a-somearg']``.
+    It unites two arguments to one, if the second argument starts with ``'-'``.
 
     The reason is that ``argparse`` cannot parse this particular pattern.
-    https://bugs.python.org/issue9334
-    https://stackoverflow.com/a/21894384
-    And `_plus` uses this type of arguments frequantly.
 
-    :param parser: ArgumentParser object
-    :param matcher: regex string to match options
+    | https://bugs.python.org/issue9334
+    | https://stackoverflow.com/a/21894384
+
+    And ``_plus`` uses this type of arguments frequently.
+
+    :param parser: ArgumentParser object,
+        already actions registered
+    :param matcher: regex string to match options,
+        to narrow the targets
+        (``None`` means to process all arguments)
     :param args: arguments list to parse, defaults to ``sys.argv[1:]``
+        (the same as ``argparse`` default)
     """
     def _iter_args(args, actions):
         args = iter(args)
