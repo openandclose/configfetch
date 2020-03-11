@@ -42,7 +42,7 @@ def register(meth):
     return meth
 
 
-def _func_dict(registry):
+def _make_func_dict(registry):
     """Make a dictionary with uppercase keys.
 
     ``_comma`` -> ``{'COMMA': '_comma'}``
@@ -50,12 +50,12 @@ def _func_dict(registry):
     return {func.lstrip('_').upper(): func for func in registry}
 
 
-def _func_regex(registry):
+def _make_func_regex(registry):
     r"""Make regex expression to parse custom ``INI`` (``FINI``) syntax.
 
     ``['_comma', '_bar']`` -> ``(?:[=(COMMA)]|[=(BAR)])\s*``.
     """
-    formats = _func_dict(registry).keys()
+    formats = _make_func_dict(registry).keys()
     formats = '|'.join([r'\[=(' + fmt + r')\]' for fmt in formats])
     formats = r'\s*(?:' + formats + r')\s*'
     return re.compile(formats)
@@ -155,7 +155,7 @@ class Func(object):
         return value
 
     def _get_funcname(self, option):
-        funcdict = _func_dict(_REGISTRY)
+        funcdict = _make_func_dict(_REGISTRY)
         funcnames = []
         if self._ctx:
             if self._ctx.get(option):
@@ -304,7 +304,7 @@ class ConfigFetch(object):
 
     def _parse_option(self, section, option, ctx):
         value = section[option]
-        func_regex = _func_regex(_REGISTRY)
+        func_regex = _make_func_regex(_REGISTRY)
 
         func = []
         while True:
