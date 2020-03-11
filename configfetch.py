@@ -85,7 +85,8 @@ class Func(object):
         '1': True, 'yes': True, 'true': True, 'on': True,
         '0': False, 'no': False, 'false': False, 'off': False}
 
-    def __init__(self, ctx, fmts):
+    def __init__(self, name, ctx, fmts):
+        self.name = name
         self._ctx = ctx
         self._fmts = fmts
 
@@ -159,7 +160,7 @@ class Func(object):
         funcnames = []
         if self._ctx:
             if self._ctx.get(option):
-                for f in self._ctx.get(option).split(','):
+                for f in self._ctx.get(option):
                     f = f.strip()
                     funcnames.append(funcdict[f])
         return funcnames
@@ -171,7 +172,7 @@ class Func(object):
     def _format_value(self, option, values, func):
         value = self._get_value(values)
         if value is _UNSET:
-            raise NoOptionError(option, self._ctx.name)
+            raise NoOptionError(option, self.name)
         if not func:
             return value
         for f in func:
@@ -228,21 +229,12 @@ class ConfigFetch(object):
         self._envs = envs or {}
         self._Func = Func
         self._parser = parser
-        self._cache = {}
+        self._ctx = {}  # option -> function_name dict
+        self._cache = {}  # SectionProxy object cache
 
-        optionxform = self._get_optionxform(use_dash, use_uppercase)
-
-        config = parser(**kwargs)
-        config.optionxform = optionxform
-
-        # ctxs(contexts) is also a ConfigParser object, not just a dictionary,
-        # because of ``default_section`` handling.
-        ctxs = configparser.ConfigParser(
-            default_section=config.default_section)
-        ctxs.optionxform = config.optionxform
-
-        self._config = config
-        self._ctxs = ctxs
+        self._optionxform = self._get_optionxform(use_dash, use_uppercase)
+        self._config = parser(**kwargs)
+        self._config.optionxform = self._optionxform
 
     def read_file(self, f, format=None):
         """Read config from an opened file object.
@@ -288,19 +280,15 @@ class ConfigFetch(object):
 
     def _check_and_parse_config(self, format):
         if format is None:
-            if len(self._ctxs._sections) == 0:
+            if len(self._ctx) == 0:
                 format = 'fini'
         if format == 'fini':
             self._parse_config()
 
     def _parse_config(self):
-        ctxs = self._ctxs
         for secname, section in self._config.items():
-            if secname not in ctxs:  # not in sections and default_section
-                ctxs.add_section(secname)
-            ctx = ctxs[secname]
             for option in section:
-                self._parse_option(section, option, ctx)
+                self._parse_option(section, option, self._ctx)
 
     def _parse_option(self, section, option, ctx):
         value = section[option]
@@ -319,9 +307,7 @@ class ConfigFetch(object):
 
         section[option] = value
         if func:
-            # ``ctxs`` is a ``configparser`` object,
-            # so option values must be a string.
-            ctx[option] = ','.join(func)
+            ctx[option] = func
 
     # TODO:
     # Invalidate section names this class reserves.
@@ -332,13 +318,8 @@ class ConfigFetch(object):
         if section in self._cache:
             return self._cache[section]
 
-        if section in self._ctxs:
-            ctx = self._ctxs[section]
-        else:
-            ctx = self._ctxs[self._ctxs.default_section]
-
         s = SectionProxy(
-            self, section, ctx, self._fmts, self._Func)
+            self, section, self._ctx, self._fmts, self._Func)
         self._cache[section] = s
         return s
 
@@ -362,7 +343,7 @@ class SectionProxy(object):
     def __init__(self, conf, section, ctx, fmts, Func):
         self._conf = conf
         self._config = conf._config
-        self._section = section
+        self.name = section
         self._ctx = ctx
         self._fmts = fmts
         self._Func = Func
@@ -376,7 +357,7 @@ class SectionProxy(object):
     # ``None`` option case must be provided
     # for section verification in `__init__()`.
     def _get_section(self, option=None):
-        return self._section
+        return self.name
 
     def _get_conf(self, option, fallback=_UNSET, convert=False):
         section = self._get_section(option)
@@ -423,10 +404,11 @@ class SectionProxy(object):
 
     def _get_funcname(self, option):
         f = self._get_func()
-        return f._get_funcname(option)
+        optionxform = self._conf._optionxform
+        return f._get_funcname(optionxform(option))
 
     def _get_func(self):
-        return self._Func(self._ctx, self._fmts)
+        return self._Func(self.name, self._ctx, self._fmts)
 
     def get(self, option, fallback=_UNSET):
         try:
@@ -443,7 +425,7 @@ class SectionProxy(object):
         self._config.set(section, option, value)
 
     def __iter__(self):
-        return self._config[self._section].__iter__()
+        return self._config[self.name].__iter__()
 
 
 class Double(object):
@@ -495,7 +477,7 @@ class Double(object):
         parent_val = self.parent_sec._get_conf(option)
         values = self.sec._get_values(option)
         values = values + [parent_val]
-        self._check_unset(values, option, self.sec._ctx.name)
+        self._check_unset(values, option, self.sec.name)
         return _get_plusminus_values(reversed(values))
 
     def get(self, option, fallback=_UNSET):
