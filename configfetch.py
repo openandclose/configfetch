@@ -2,7 +2,7 @@
 """Helper to get values from configparser and argparse."""
 
 import argparse
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 import configparser
 import os
 import re
@@ -159,8 +159,9 @@ class Func(object):
         funcdict = _make_func_dict(_REGISTRY)
         funcnames = []
         if self._ctx:
-            if self._ctx.get(option):
-                for f in self._ctx.get(option):
+            funcs = self._ctx.get(option, {}).get('func')
+            if funcs:
+                for f in funcs:
                     f = f.strip()
                     funcnames.append(funcdict[f])
         return funcnames
@@ -221,6 +222,9 @@ class ConfigFetch(object):
         (usuful if commandline wants to use case sensitive argument names)
     """
 
+    HELP_PREFIX = ': '
+    ARGS_PREFIX = ':: '
+
     def __init__(self, *, fmts=None, args=None, envs=None, Func=Func,
             parser=configparser.ConfigParser,
             use_dash=True, use_uppercase=True, **kwargs):
@@ -229,12 +233,15 @@ class ConfigFetch(object):
         self._envs = envs or {}
         self._Func = Func
         self._parser = parser
-        self._ctx = {}  # option -> function_name dict
+        self._ctx = defaultdict(dict)  # option -> metadata dict
         self._cache = {}  # SectionProxy object cache
 
         self._optionxform = self._get_optionxform(use_dash, use_uppercase)
         self._config = parser(**kwargs)
         self._config.optionxform = self._optionxform
+
+        self._help_re = re.compile(r'^\s*%s(.+)$' % self.HELP_PREFIX)
+        self._args_re = re.compile(r'^\s*%s(.+)\s*$' % self.ARGS_PREFIX)
 
     def read_file(self, f, format=None):
         """Read config from an opened file object.
@@ -288,10 +295,61 @@ class ConfigFetch(object):
     def _parse_config(self):
         for secname, section in self._config.items():
             for option in section:
-                self._parse_option(section, option, self._ctx)
+                self._parse_option(section, option)
 
-    def _parse_option(self, section, option, ctx):
+    def _parse_option(self, section, option):
         value = section[option]
+        argparse_args, value = self._parse_argparse_args(value)
+        func, value = self._parse_func(value)
+
+        section[option] = value
+        if argparse_args:
+            self._ctx[option]['args'] = argparse_args
+        if func:
+            self._ctx[option]['func'] = func
+
+    def _parse_argparse_args(self, value):
+        args = {}
+        help_ = []
+        option_value = []
+        state = 'root'  # root -> (help) -> (args) -> value
+
+        print(value)
+        for line in value.split('\n'):
+            m = self._help_re.match(line)
+            if m:
+                if state not in ('root', 'help'):
+                    raise ValueError('Invalid config line: %s' % line)
+                state = 'help'
+                help_.append(m.group(1))
+                continue
+
+            m = self._args_re.match(line)
+            if m:
+                if state not in ('help', 'args'):
+                    raise ValueError('Invalid config line: %s' % line)
+                state = 'args'
+                key, val = m.group(1).split(':', maxsplit=1)
+                key, val = self._convert_argparse_arg(key, val)
+                args[key] = val
+                continue
+
+            state = 'value'
+            option_value.append(line.strip())
+
+        if not help_:
+            return {}, value
+
+        args['help'] = '\n'.join(help_)
+        return args, '\n'.join(option_value)
+
+    def _convert_argparse_arg(self, key, val):
+        key, val = key.strip(), val.strip()
+        if key in ('names', 'choices'):
+            return key, _parse_comma(val)
+        return key, val
+
+    def _parse_func(self, value):
         func_regex = _make_func_regex(_REGISTRY)
 
         func = []
@@ -304,10 +362,7 @@ class ConfigFetch(object):
                 value = value[match.end():]
             else:
                 break
-
-        section[option] = value
-        if func:
-            ctx[option] = func
+        return func, value
 
     # TODO:
     # Invalidate section names this class reserves.

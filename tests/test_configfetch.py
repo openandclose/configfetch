@@ -585,3 +585,28 @@ class TestMinusAdapter:
         args = ['--aa', '-x', '-xxxx', '--bb']
         new_args = ['--aa', '-x-xxxx', '--bb']
         self.compare(args, new_args)
+
+
+class TestArgsSyntax:
+
+    def test_help(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             [=COMMA] xxx1, xxx2
+        """)
+        conf = fetch(data)
+        args = conf._ctx['aa']['args']
+        assert args['help'] == 'help string'
+
+    def test_help_and_choices(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: choices: ss, tt
+             tt
+        """)
+        conf = fetch(data)
+        args = conf._ctx['aa']['args']
+        assert args['help'] == 'help string'
+        assert args['choices'] == ['ss', 'tt']
