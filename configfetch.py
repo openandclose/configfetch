@@ -173,118 +173,27 @@ class Func(object):
         return value
 
 
-class ConfigFetch(object):
-    """A custom Configuration object.
-
-    It keeps two ``ConfigParser`` object (``_config`` and ``_ctxs``).
-
-    ``_config`` is an ordinary one.
-    ``_ctxs`` is one which keeps function names for each option.
-    Option access returns a value already functions applied.
-
-    It also has ``argparse.Namespace`` object (args),
-    and Environment variable dictionay (envs).
-
-    They are global, having no concept of sections.
-    If the option name counterpart is defined,
-    their value precedes the config value.
-
-
-    The class ``__init__`` should accept
-    all ``ConfigParser.__init__`` keyword arguments.
-    The class specific argumants are:
-
-    :param fmts: dictionay ``Func._fmt`` uses
-    :param args: ``argparse.Namespace`` object,
-        already commandline arguments parsed
-    :param envs: dictionary with Environment Variable name and value
-        as key and value
-    :param Func: ``Func`` or subclasses, keep actual functions
-    :param parser: ``ConfigParser`` or subclasses,
-        keep actual config data
-    :param use_dash: if True, you can use dashes for option names
-        (change dashes to underscores Internally)
-    :param use_uppercase: if True, option names are case sensitive.
-        (usuful if commandline wants to use case sensitive argument names)
-    """
+class OptionParser(object):
+    """Parse option values for ``ConfigFetch``."""
 
     HELP_PREFIX = ':'
     ARGS_PREFIX = '::'
     ARGS_SHORTNAMES = {'f': 'func'}
 
-    def __init__(self, *, fmts=None, args=None, envs=None, Func=Func,
-            parser=configparser.ConfigParser,
-            use_dash=True, use_uppercase=True, **kwargs):
-        self._fmts = fmts or {}
-        self._args = args or argparse.Namespace()
-        self._envs = envs or {}
-        self._Func = Func
-        self._parser = parser
-        self._ctx = defaultdict(dict)  # option -> metadata dict
-        self._cache = {}  # SectionProxy object cache
-
-        self._optionxform = self._get_optionxform(use_dash, use_uppercase)
-        self._config = parser(**kwargs)
-        self._config.optionxform = self._optionxform
+    def __init__(self, config, ctx):
+        self._config = config
+        self._ctx = ctx
 
         # Note: require a space (' ') for nonblank values
         comp = re.compile
         self._help_re = comp(r'^\s*(%s)(?: (.+))*$' % self.HELP_PREFIX)
         self._args_re = comp(r'^\s*(%s)(?: (.+))*\s*$' % self.ARGS_PREFIX)
 
-    def read_file(self, f, format=None):
-        """Read config from an opened file object.
-
-        :param f: a file object
-        :param format: 'fini', 'ini' or ``None``
-
-        If ``format`` is 'fini',
-        read config values, and function definitions ([=SOMETHING]).
-        Previous definitions are overwritten, if any.
-
-        If ``format`` is 'ini' (or actually any other string than 'fini'),
-        read only config values, definitions are kept intact.
-
-        If ``format`` is ``None`` (default),
-        only when the definitions dict (``_ctxs``) is blank,
-        read the file as 'fini'
-        (supposed to be the first time read).
-        Otherwise read the file as 'ini'.
-        """
-        self._config.read_file(f)
-        self._check_and_parse_config(format)
-
-    def read_string(self, string, format=None):
-        """Read config from a string.
-
-        :param string: a string
-        :param format: 'fini', 'ini' or ``None``
-
-        The meaning of ``format`` is the same as ``.read_file``.
-        """
-        self._config.read_string(string)
-        self._check_and_parse_config(format)
-
-    def _get_optionxform(self, use_dash, use_uppercase):
-        def _xform(option):
-            if use_dash:
-                option = option.replace('-', '_')
-            if not use_uppercase:
-                option = option.lower()
-            return option
-        return _xform
-
-    def _check_and_parse_config(self, format):
-        if format is None:
-            if len(self._ctx) == 0:
-                format = 'fini'
-        if format == 'fini':
-            self._parse_config()
-
-    def _parse_config(self):
+    def parse(self):
         for secname, section in self._config.items():
             for option in section:
                 self._parse_option(section, option)
+        return self._ctx
 
     def _parse_option(self, section, option):
         value = section[option]
@@ -349,6 +258,109 @@ class ConfigFetch(object):
         if key in ('names', 'choices', 'func'):
             return key, _parse_comma(val)
         return key, val
+
+
+class ConfigFetch(object):
+    """A custom Configuration object.
+
+    It keeps two ``ConfigParser`` object (``_config`` and ``_ctxs``).
+
+    ``_config`` is an ordinary one.
+    ``_ctxs`` is one which keeps function names for each option.
+    Option access returns a value already functions applied.
+
+    It also has ``argparse.Namespace`` object (args),
+    and Environment variable dictionay (envs).
+
+    They are global, having no concept of sections.
+    If the option name counterpart is defined,
+    their value precedes the config value.
+
+
+    The class ``__init__`` should accept
+    all ``ConfigParser.__init__`` keyword arguments.
+    The class specific argumants are:
+
+    :param fmts: dictionay ``Func._fmt`` uses
+    :param args: ``argparse.Namespace`` object,
+        already commandline arguments parsed
+    :param envs: dictionary with Environment Variable name and value
+        as key and value
+    :param Func: ``Func`` or subclasses, keep actual functions
+    :param parser: ``ConfigParser`` or subclasses,
+        keep actual config data
+    :param use_dash: if True, you can use dashes for option names
+        (change dashes to underscores Internally)
+    :param use_uppercase: if True, option names are case sensitive.
+        (usuful if commandline wants to use case sensitive argument names)
+    """
+
+    def __init__(self, *, fmts=None, args=None, envs=None,
+            Func=Func, optionparser=OptionParser,
+            parser=configparser.ConfigParser,
+            use_dash=True, use_uppercase=True, **kwargs):
+        self._fmts = fmts or {}
+        self._args = args or argparse.Namespace()
+        self._envs = envs or {}
+        self._Func = Func
+        self._optionparser = optionparser
+        self._parser = parser
+        self._ctx = defaultdict(dict)  # option -> metadata dict
+        self._cache = {}  # SectionProxy object cache
+
+        self._optionxform = self._get_optionxform(use_dash, use_uppercase)
+        self._config = parser(**kwargs)
+        self._config.optionxform = self._optionxform
+
+    def read_file(self, f, format=None):
+        """Read config from an opened file object.
+
+        :param f: a file object
+        :param format: 'fini', 'ini' or ``None``
+
+        If ``format`` is 'fini',
+        read config values, and function definitions ([=SOMETHING]).
+        Previous definitions are overwritten, if any.
+
+        If ``format`` is 'ini' (or actually any other string than 'fini'),
+        read only config values, definitions are kept intact.
+
+        If ``format`` is ``None`` (default),
+        only when the definitions dict (``_ctxs``) is blank,
+        read the file as 'fini'
+        (supposed to be the first time read).
+        Otherwise read the file as 'ini'.
+        """
+        self._config.read_file(f)
+        self._check_and_parse_config(format)
+
+    def read_string(self, string, format=None):
+        """Read config from a string.
+
+        :param string: a string
+        :param format: 'fini', 'ini' or ``None``
+
+        The meaning of ``format`` is the same as ``.read_file``.
+        """
+        self._config.read_string(string)
+        self._check_and_parse_config(format)
+
+    def _get_optionxform(self, use_dash, use_uppercase):
+        def _xform(option):
+            if use_dash:
+                option = option.replace('-', '_')
+            if not use_uppercase:
+                option = option.lower()
+            return option
+        return _xform
+
+    def _check_and_parse_config(self, format):
+        if format is None:
+            if len(self._ctx) == 0:
+                format = 'fini'
+        if format == 'fini':
+            optionparser = self._optionparser(self._config, self._ctx)
+            self._ctx = optionparser.parse()
 
     # TODO:
     # Invalidate section names this class reserves.
