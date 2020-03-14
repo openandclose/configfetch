@@ -159,10 +159,9 @@ class Func(object):
         funcdict = _make_func_dict(_REGISTRY)
         funcnames = []
         if self._ctx:
-            funcs = self._ctx.get(option, {}).get('func')
-            if funcs:
-                for f in funcs:
-                    f = f.strip()
+            func = self._ctx.get(option, {}).get('func')
+            if func:
+                for f in func:
                     funcnames.append(funcdict[f])
         return funcnames
 
@@ -454,15 +453,15 @@ class SectionProxy(object):
         if arg not in (_UNSET, None):
             if not isinstance(arg, str):
                 return arg
-        f = self._get_func()
+        f = self._get_func_class()
         return f(option, values)
 
     def _get_funcname(self, option):
-        f = self._get_func()
+        f = self._get_func_class()
         optionxform = self._conf._optionxform
         return f._get_funcname(optionxform(option))
 
-    def _get_func(self):
+    def _get_func_class(self):
         return self._Func(self.name, self._ctx, self._fmts)
 
     def get(self, option, fallback=_UNSET):
