@@ -636,7 +636,7 @@ class TestMinusAdapter:
         self.compare(args, new_args)
 
 
-class TestArgsSyntax:
+class TestParseArgs:
 
     def test_help(self):
         data = f("""
@@ -689,3 +689,83 @@ class TestArgsSyntax:
         args = conf._ctx['aa']['args']
         assert args['help'] == 'help string'
         assert args['choices'] == ['ss', 'tt']
+
+
+class TestBuildArgs:
+
+    def _get_action(self, conf, option_strings):
+        parser = argparse.ArgumentParser(prog='test')
+        conf.set_arguments(parser)
+        # parser.print_help()
+        for action in parser._get_optional_actions():
+            if option_strings in action.option_strings:
+                break
+        return action
+        raise ValueError('No action with option_strings: %r' % option_strings)
+
+    def test_help(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: f: comma
+             xxx1, xxx2
+        """)
+        conf = fetch(data)
+        action = self._get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.help == 'help string'
+
+    def test_help_and_choices(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: choices: ss, tt
+             tt
+        """)
+        conf = fetch(data)
+        action = self._get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.choices == ['ss', 'tt']
+
+    def test_names(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: names: a
+             true
+        """)
+        conf = fetch(data)
+        action = self._get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.option_strings == ['-a', '--aa']
+
+    def test_bool(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: f: bool
+             yes
+        """)
+        conf = fetch(data)
+        action = self._get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreConstAction)
+        assert action.const == 'yes'
+
+    def test_bool_opposite(self):
+        data = f("""
+        [sec1]
+        aa =    : help string
+                :: f: bool
+                yes
+        no_aa = : help string2
+                :: dest: aa
+                :: f: bool
+                no
+        """)
+        conf = fetch(data)
+        parser = argparse.ArgumentParser(prog='test')
+        conf.set_arguments(parser)
+        namespace = parser.parse_args(['--aa'])
+        assert namespace.__dict__['aa'] == 'yes'
+        namespace = parser.parse_args(['--no-aa'])
+        assert namespace.__dict__['aa'] == 'no'

@@ -259,6 +259,46 @@ class OptionParser(object):
             return key, _parse_comma(val)
         return key, val
 
+    def build(self, argument_parser, sections=None):
+        if sections is None:
+            sections = self._config.sections()
+        if isinstance(sections, str):
+            sections = [sections]
+        for section in sections:
+            for option in self._config.options(section):
+                self._build(argument_parser, section, option)
+
+    def _build(self, parser, section, option):
+        args = self._ctx.get(option, {}).get('args')
+        if not args or not args.get('help'):
+            return
+
+        names = args.pop('names', None) or []
+        names.append(option)
+        names = self._build_argument_names(names)
+
+        func = self._ctx.get(option, {}).get('func')
+        if func and 'bool' in func:
+            bool_arg = {
+                'action': 'store_const',
+                'const': self._config.get(section, option),
+            }
+            args.update(bool_arg)
+        parser.add_argument(*names, **args)
+
+    def _build_argument_names(self, names_):
+        names = []
+        for n in names_:
+            if len(n) == 1:
+                names.append('-' + n)
+                continue
+            # permissive rule, both 'v' and '-v' are OK.
+            if len(n) == 2 and n[0] == '-':
+                names.append(n)
+                continue
+            names.append('--' + n.replace('_', '-'))
+        return names
+
 
 class ConfigFetch(object):
     """A custom Configuration object.
@@ -361,6 +401,11 @@ class ConfigFetch(object):
         if format == 'fini':
             optionparser = self._optionparser(self._config, self._ctx)
             self._ctx = optionparser.parse()
+
+    def set_arguments(self, argument_parser, sections=None):
+        optionparser = self._optionparser(self._config, self._ctx)
+        optionparser.build(argument_parser, sections)
+        return argument_parser
 
     # TODO:
     # Invalidate section names this class reserves.
