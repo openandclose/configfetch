@@ -208,8 +208,8 @@ class ConfigFetch(object):
         (usuful if commandline wants to use case sensitive argument names)
     """
 
-    HELP_PREFIX = ': '
-    ARGS_PREFIX = ':: '
+    HELP_PREFIX = ':'
+    ARGS_PREFIX = '::'
     ARGS_SHORTNAMES = {'f': 'func'}
 
     def __init__(self, *, fmts=None, args=None, envs=None, Func=Func,
@@ -227,8 +227,10 @@ class ConfigFetch(object):
         self._config = parser(**kwargs)
         self._config.optionxform = self._optionxform
 
-        self._help_re = re.compile(r'^\s*%s(.+)$' % self.HELP_PREFIX)
-        self._args_re = re.compile(r'^\s*%s(.+)\s*$' % self.ARGS_PREFIX)
+        # Note: require a space (' ') for nonblank values
+        comp = re.compile
+        self._help_re = comp(r'^\s*(%s)(?: (.+))*$' % self.HELP_PREFIX)
+        self._args_re = comp(r'^\s*(%s)(?: (.+))*\s*$' % self.ARGS_PREFIX)
 
     def read_file(self, f, format=None):
         """Read config from an opened file object.
@@ -311,15 +313,15 @@ class ConfigFetch(object):
                 if state not in ('root', 'help'):
                     raise OptionParseError(error_fmt % line)
                 state = 'help'
-                help_.append(m.group(1))
+                help_.append(m.group(2) if m.group(2) else '')
                 continue
 
             m = self._args_re.match(line)
             if m:
-                if not m.group(1):
+                if not m.group(2):
                     raise OptionParseError(error_fmt % line)
 
-                key, val = m.group(1).split(':', maxsplit=1)
+                key, val = m.group(2).split(':', maxsplit=1)
                 key, val = self._convert_arg(key, val)
                 if key != 'func':
                     if state not in ('help', 'args'):

@@ -649,6 +649,35 @@ class TestArgsSyntax:
         args = conf._ctx['aa']['args']
         assert args['help'] == 'help string'
 
+    def test_help_multilines(self):
+        data = f("""
+        [sec1]
+        aa = : This
+             : is a
+             : help.
+             :: f: comma
+             xxx1, xxx2
+        """)
+        conf = fetch(data)
+        args = conf._ctx['aa']['args']
+        assert args['help'] == 'This\nis a\nhelp.'
+
+    def test_help_multilines_blank(self):
+        # testing both ':' and ': '
+        data = f("""
+        [sec1]
+        aa = : This
+             : is a
+             :
+             : 
+             : help.
+             :: f: comma
+             xxx1, xxx2
+        """)
+        conf = fetch(data)
+        args = conf._ctx['aa']['args']
+        assert args['help'] == 'This\nis a\n\n\nhelp.'
+
     def test_help_and_choices(self):
         data = f("""
         [sec1]
