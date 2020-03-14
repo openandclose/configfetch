@@ -201,16 +201,13 @@ class OptionParser(object):
 
         section[option] = value
         if args:
-            func = args.pop('func', None)
-            if func:
-                self._ctx[option]['func'] = func
-            self._ctx[option]['args'] = args
+            self._ctx[option] = args
 
     def _parse_args(self, value):
         help_ = []
-        args = {}
+        args = defaultdict(dict)
         option_value = []
-        state = 'root'  # root -> (help) -> (args) -> (func) -> value
+        state = 'root'  # root -> (help) -> (argparse) -> (func) -> value
         error_fmt = 'Invalid line at: %r'
 
         for line in value.split('\n'):
@@ -233,14 +230,15 @@ class OptionParser(object):
                 key, val = m.group(2).split(':', maxsplit=1)
                 key, val = self._convert_arg(key, val)
                 if key != 'func':
-                    if state not in ('help', 'args'):
+                    if state not in ('help', 'argparse'):
                         raise OptionParseError(error_fmt % line)
-                    state = 'args'
+                    args['argparse'][key] = val
+                    state = 'argparse'
                 else:
-                    if state not in ('root', 'help', 'args'):
+                    if state not in ('root', 'help', 'argparse'):
                         raise OptionParseError(error_fmt % line)
+                    args['func'] = val
                     state = 'func'
-                args[key] = val
                 continue
 
             state = 'value'
@@ -248,7 +246,7 @@ class OptionParser(object):
 
         option_value = '\n'.join(option_value)
         if help_:
-            args['help'] = '\n'.join(help_)
+            args['argparse']['help'] = '\n'.join(help_)
         return args, option_value
 
     def _convert_arg(self, key, val):
@@ -269,7 +267,7 @@ class OptionParser(object):
                 self._build(argument_parser, section, option)
 
     def _build(self, parser, section, option):
-        args = self._ctx.get(option, {}).get('args')
+        args = self._ctx.get(option, {}).get('argparse')
         if not args or not args.get('help'):
             return
 

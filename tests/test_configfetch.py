@@ -646,7 +646,7 @@ class TestParseArgs:
              xxx1, xxx2
         """)
         conf = fetch(data)
-        args = conf._ctx['aa']['args']
+        args = conf._ctx['aa']['argparse']
         assert args['help'] == 'help string'
 
     def test_help_multilines(self):
@@ -659,7 +659,7 @@ class TestParseArgs:
              xxx1, xxx2
         """)
         conf = fetch(data)
-        args = conf._ctx['aa']['args']
+        args = conf._ctx['aa']['argparse']
         assert args['help'] == 'This\nis a\nhelp.'
 
     def test_help_multilines_blank(self):
@@ -675,7 +675,7 @@ class TestParseArgs:
              xxx1, xxx2
         """)
         conf = fetch(data)
-        args = conf._ctx['aa']['args']
+        args = conf._ctx['aa']['argparse']
         assert args['help'] == 'This\nis a\n\n\nhelp.'
 
     def test_help_and_choices(self):
@@ -686,7 +686,7 @@ class TestParseArgs:
              tt
         """)
         conf = fetch(data)
-        args = conf._ctx['aa']['args']
+        args = conf._ctx['aa']['argparse']
         assert args['help'] == 'help string'
         assert args['choices'] == ['ss', 'tt']
 
