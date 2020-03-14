@@ -341,8 +341,27 @@ class TestParseFunc:
         assert conf.sec1.aa is False
 
 
-# Just checking the library's behaviors.
+# Just checking the standard library's behaviors.
 class TestConfigParser:
+
+    def test_indent(self):
+        data = f("""
+        [sec1]
+          aa =
+           xxx
+        """)
+        config = configparser.ConfigParser()
+        config.read_string(data)
+        assert config['sec1']['aa'] == '\nxxx'
+
+        data = f("""
+        [sec1]
+          aa =
+          xxx
+        """)
+        config = configparser.ConfigParser()
+        with pytest.raises(configparser.ParsingError):
+            config.read_string(data)
 
     def test_allow_no_value(self):
         data = f("""
