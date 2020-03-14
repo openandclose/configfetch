@@ -327,16 +327,11 @@ class ConfigFetch(object):
     :param Func: ``Func`` or subclasses, keep actual functions
     :param parser: ``ConfigParser`` or subclasses,
         keep actual config data
-    :param use_dash: if True, you can use dashes for option names
-        (change dashes to underscores Internally)
-    :param use_uppercase: if True, option names are case sensitive.
-        (usuful if commandline wants to use case sensitive argument names)
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None,
             Func=Func, optionparser=OptionParser,
-            parser=configparser.ConfigParser,
-            use_dash=True, use_uppercase=True, **kwargs):
+            parser=configparser.ConfigParser, **kwargs):
         self._fmts = fmts or {}
         self._args = args or argparse.Namespace()
         self._envs = envs or {}
@@ -346,7 +341,7 @@ class ConfigFetch(object):
         self._ctx = defaultdict(dict)  # option -> metadata dict
         self._cache = {}  # SectionProxy object cache
 
-        self._optionxform = self._get_optionxform(use_dash, use_uppercase)
+        self._optionxform = self._get_optionxform()
         self._config = parser(**kwargs)
         self._config.optionxform = self._optionxform
 
@@ -383,12 +378,8 @@ class ConfigFetch(object):
         self._config.read_string(string)
         self._check_and_parse_config(format)
 
-    def _get_optionxform(self, use_dash, use_uppercase):
+    def _get_optionxform(self):
         def _xform(option):
-            if use_dash:
-                option = option.replace('-', '_')
-            if not use_uppercase:
-                option = option.lower()
             return option
         return _xform
 
@@ -595,8 +586,7 @@ class Double(object):
 
 def fetch(file_or_string, *, encoding=None,
         fmts=None, args=None, envs=None, Func=Func,
-        parser=configparser.ConfigParser,
-        use_dash=True, use_uppercase=True, **kwargs):
+        parser=configparser.ConfigParser, **kwargs):
     """Fetch ``ConfigFetch`` object.
 
     It is a convenience function for the basic use of the library.
@@ -611,7 +601,7 @@ def fetch(file_or_string, *, encoding=None,
     Files are read with ``format=None``.
     """
     conf = ConfigFetch(fmts=fmts, args=args, envs=envs, Func=Func,
-        parser=parser, use_dash=use_dash, use_uppercase=use_uppercase)
+        parser=parser)
 
     if os.path.isfile(file_or_string):
         with open(file_or_string, encoding=encoding) as f:
