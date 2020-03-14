@@ -126,7 +126,8 @@ class TestParseConfig:
     def test_conf_bool(self):
         data = f("""
         [sec1]
-        aa = [=BOOL] Yes
+        aa = :: f: bool
+             Yes
         """)
         conf = fetch(data)
         assert conf.sec1.aa is True
@@ -134,7 +135,8 @@ class TestParseConfig:
     def test_conf_bool_no(self):
         data = f("""
         [sec1]
-        aa = [=BOOL] No
+        aa = :: f: bool
+             No
         """)
         conf = fetch(data)
         assert conf.sec1.aa is False
@@ -142,7 +144,8 @@ class TestParseConfig:
     def test_conf_bool_blank(self):
         data = f("""
         [sec1]
-        aa = [=BOOL]
+        aa = :: f: bool
+              
         """)
         conf = fetch(data)
         with pytest.raises(ValueError):
@@ -151,7 +154,8 @@ class TestParseConfig:
     def test_conf_comma(self):
         data = f("""
         [sec1]
-        aa = [=COMMA] xxx1, xxx2, xxx3
+        aa = :: f: comma
+             xxx1, xxx2, xxx3
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ['xxx1', 'xxx2', 'xxx3']
@@ -159,7 +163,8 @@ class TestParseConfig:
     def test_conf_comma_indent(self):
         data = f("""
         [sec1]
-        aa = [=COMMA] xxx1, xxx2,
+        aa = :: f: comma
+             xxx1, xxx2,
             xxx3
         """)
         conf = fetch(data)
@@ -168,8 +173,9 @@ class TestParseConfig:
     def test_conf_comma_newline(self):
         data = f("""
         [sec1]
-        aa = [=COMMA] xxx1, xxx2
-            xxx3
+        aa = :: f: comma
+             xxx1, xxx2
+             xxx3
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ['xxx1', 'xxx2\nxxx3']
@@ -177,7 +183,8 @@ class TestParseConfig:
     def test_conf_comma_blank(self):
         data = f("""
         [sec1]
-        aa = [=COMMA]
+        aa = :: f: comma
+              
         """)
         conf = fetch(data)
         assert conf.sec1.aa == []
@@ -185,10 +192,10 @@ class TestParseConfig:
     def test_conf_line(self):
         data = f("""
         [sec1]
-        aa = [=LINE]
-            xxx1
-            xxx2
-            xxx3
+        aa = :: f: line
+             xxx1
+             xxx2
+             xxx3
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ['xxx1', 'xxx2', 'xxx3']
@@ -196,10 +203,10 @@ class TestParseConfig:
     def test_conf_line_comma(self):
         data = f("""
         [sec1]
-        aa = [=LINE]
-            xxx1
-            xxx2
-            xxx3, xxx4
+        aa = :: f: line
+             xxx1
+             xxx2
+             xxx3, xxx4
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ['xxx1', 'xxx2', 'xxx3, xxx4']
@@ -207,7 +214,8 @@ class TestParseConfig:
     def test_conf_line_blank(self):
         data = f("""
         [sec1]
-        aa = [=LINE]
+        aa = :: f: line
+              
         """)
         conf = fetch(data)
         assert conf.sec1.aa == []
@@ -215,7 +223,8 @@ class TestParseConfig:
     def test_conf_line_multiblanks(self):
         data = f("""
         [sec1]
-        aa = [=LINE]
+        aa = :: f: line
+              
             
             
         """)
@@ -225,7 +234,8 @@ class TestParseConfig:
     def test_conf_bar_comma(self):
         data = f("""
         [sec1]
-        aa = [=COMMA][=BAR] xxx1, xxx2, xxx3
+        aa = :: f: comma, bar
+             xxx1, xxx2, xxx3
         """)
         conf = fetch(data)
         assert conf.sec1.aa == 'xxx1|xxx2|xxx3'
@@ -233,7 +243,8 @@ class TestParseConfig:
     def test_conf_bar_comma_blank(self):
         data = f("""
         [sec1]
-        aa = [=COMMA][=BAR]
+        aa = :: f: comma, bar
+              
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ''
@@ -241,7 +252,8 @@ class TestParseConfig:
     def test_conf_bar_comma_blank_spaces(self):
         data = f("""
         [sec1]
-        aa = [=COMMA] [=BAR]    
+        aa = :: f: comma, bar
+                 
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ''
@@ -249,9 +261,10 @@ class TestParseConfig:
     def test_conf_bar_line(self):
         data = f("""
         [sec1]
-        aa = [=LINE][=BAR] xxx1
-            xxx2
-            xxx3
+        aa = :: f: line, bar
+             xxx1
+             xxx2
+             xxx3
         """)
         conf = fetch(data)
         assert conf.sec1.aa == 'xxx1|xxx2|xxx3'
@@ -259,7 +272,8 @@ class TestParseConfig:
     def test_conf_bar_line_blank(self):
         data = f("""
         [sec1]
-        aa = [=LINE][=BAR]
+        aa = :: f: line, bar
+              
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ''
@@ -267,7 +281,8 @@ class TestParseConfig:
     def test_conf_bar_line_blank_spaces(self):
         data = f("""
         [sec1]
-        aa = [=LINE] [=BAR]    
+        aa = :: f: line, bar
+                 
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ''
@@ -275,7 +290,8 @@ class TestParseConfig:
     def test_conf_cmd(self):
         data = f("""
         [sec1]
-        aa = [=CMD] --aaa -b "ccc cc" ddd,dd
+        aa = :: f: cmd
+             --aaa -b "ccc cc" ddd,dd
         """)
         conf = fetch(data)
         assert conf.sec1.aa == ['--aaa', '-b', 'ccc cc', 'ddd,dd']
@@ -283,7 +299,9 @@ class TestParseConfig:
     def test_conf_cmds(self):
         data = f("""
         [sec1]
-        aa = [=COMMA][=CMDS] ls *.txt, find . "aaa"
+        aa = :: f: line, cmds
+             ls *.txt
+             find . "aaa"
         """)
         conf = fetch(data)
         assert conf.sec1.aa == [['ls', '*.txt'], ['find', '.', 'aaa']]
@@ -291,7 +309,8 @@ class TestParseConfig:
     def test_conf_fmt(self):
         data = f("""
         [sec1]
-        aa = [=FMT] {USER}/data/my.css
+        aa = :: f: fmt
+             {USER}/data/my.css
         """)
         conf = fetch(data, fmts={'USER': '/home/john'})
         assert conf.sec1.aa == '/home/john/data/my.css'
@@ -302,7 +321,8 @@ class TestParseContexts:
     def test_ctx_default_bool(self):
         data = f("""
         [DEFAULT]
-        aa = [=BOOL] no
+        aa = :: f: bool
+             no
         [sec1]
         """)
         conf = fetch(data)
@@ -311,7 +331,8 @@ class TestParseContexts:
     def test_ctx_default_bool_noop(self):
         data = f("""
         [DEFAULT]
-        aa = [=BOOL]
+        aa = :: f: bool
+              
         [sec1]
         aa = no
         """)
@@ -321,7 +342,8 @@ class TestParseContexts:
     def test_ctx_default_comma(self):
         data = f("""
         [DEFAULT]
-        aa = [=COMMA]
+        aa = :: f: comma
+              
         [sec1]
         aa = xxx1, xxx2, xxx3
         """)
@@ -335,7 +357,8 @@ class TestParseFunc:
         data = f("""
         [sec1]
         aa =
-            [=BOOL] no
+            :: f: bool
+            no
         """)
         conf = fetch(data)
         assert conf.sec1.aa is False
@@ -367,11 +390,12 @@ class TestConfigParser:
         data = f("""
         [sec1]
         aa =
-            [=BOOL] no
+            :: f: bool
+              no
         """)
         config = configparser.ConfigParser(allow_no_value=True)
         config.read_string(data)
-        assert config['sec1']['aa'] == '\n[=BOOL] no'
+        assert config['sec1']['aa'] == '\n:: f: bool\nno'
 
 
 class TestArgparse:
@@ -416,7 +440,7 @@ class TestArgparse:
     def test_args_and_conf_const(self):
         data = f("""
         [sec1]
-        cc = [=BOOL]
+        cc = :: f: bool
         """)
         args = self.get_args(['--cc'])
         conf = fetch(data, args=args)
@@ -425,7 +449,8 @@ class TestArgparse:
     def test_args_and_conf_const_false(self):
         data = f("""
         [sec1]
-        cc = [=BOOL] true
+        cc = :: f: bool
+             true
         """)
         args = self.get_args(['--no-cc'])
         conf = fetch(data, args=args)
@@ -441,7 +466,8 @@ class TestArgparse:
         assert conf.sec1.ee_eee == 'axxx'
 
 
-class CustomFunc(configfetch.Func):
+class _CustomFunc(configfetch.Func):
+    """Used the test below."""
 
     @configfetch.register
     def _custom(self, value):
@@ -453,9 +479,10 @@ class TestCustomize:
     def test_customfunc(self):
         data = f("""
         [sec1]
-        aa = [=CUSTOM] xxx
+        aa = :: f: custom
+             xxx
         """)
-        conf = fetch(data, Func=CustomFunc)
+        conf = fetch(data, Func=_CustomFunc)
         assert conf.sec1.aa == 'test'
 
 
@@ -512,7 +539,8 @@ class TestDouble:
         conf1 = fetch(data)
         data = f("""
         [sec1]
-        bb = [=COMMA]
+        bb = :: f: comma
+              
         """)
         conf2 = fetch(data)
         double = configfetch.Double(conf2.sec1, conf1.sec1)
@@ -521,12 +549,14 @@ class TestDouble:
     def test_plus(self):
         data = f("""
         [sec1]
-        aa = [=PLUS] xxx, yyy
+        aa = :: f: plus
+             xxx, yyy
         """)
         conf1 = fetch(data)
         data = f("""
         [sec1]
-        aa = [=PLUS] -yyy
+        aa = :: f: plus
+             -yyy
         """)
         conf2 = fetch(data)
         double = configfetch.Double(conf2.sec1, conf1.sec1)
@@ -612,7 +642,8 @@ class TestArgsSyntax:
         data = f("""
         [sec1]
         aa = : help string
-             [=COMMA] xxx1, xxx2
+             :: f: comma
+             xxx1, xxx2
         """)
         conf = fetch(data)
         args = conf._ctx['aa']['args']

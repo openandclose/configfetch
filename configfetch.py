@@ -36,29 +36,14 @@ class NoOptionError(Error, configparser.NoOptionError):
         super().__init__(option, section)
 
 
+class OptionParseError(Error):
+    """Raised when config has a invalid line."""
+
+
 def register(meth):
     """Decorate value functions to populate global value `_REGISTRY`."""
     _REGISTRY.add(meth.__name__)
     return meth
-
-
-def _make_func_dict(registry):
-    """Make a dictionary with uppercase keys.
-
-    ``_comma`` -> ``{'COMMA': '_comma'}``
-    """
-    return {func.lstrip('_').upper(): func for func in registry}
-
-
-def _make_func_regex(registry):
-    r"""Make regex expression to parse custom ``INI`` (``FINI``) syntax.
-
-    ``['_comma', '_bar']`` -> ``(?:[=(COMMA)]|[=(BAR)])\s*``.
-    """
-    formats = _make_func_dict(registry).keys()
-    formats = '|'.join([r'\[=(' + fmt + r')\]' for fmt in formats])
-    formats = r'\s*(?:' + formats + r')\s*'
-    return re.compile(formats)
 
 
 def _parse_comma(value):
@@ -156,18 +141,20 @@ class Func(object):
         return value
 
     def _get_funcname(self, option):
-        funcdict = _make_func_dict(_REGISTRY)
         funcnames = []
         if self._ctx:
             func = self._ctx.get(option, {}).get('func')
             if func:
                 for f in func:
-                    funcnames.append(funcdict[f])
+                    funcnames.append(self._ctx_to_funcname_map(f))
         return funcnames
 
     def _get_func(self, option):
         funcnames = self._get_funcname(option)
         return [getattr(self, fn) for fn in funcnames]
+
+    def _ctx_to_funcname_map(self, name):
+        return '_' + name
 
     def _format_value(self, option, values, func):
         value = self._get_value(values)
@@ -223,6 +210,7 @@ class ConfigFetch(object):
 
     HELP_PREFIX = ': '
     ARGS_PREFIX = ':: '
+    ARGS_SHORTNAMES = {'f': 'func'}
 
     def __init__(self, *, fmts=None, args=None, envs=None, Func=Func,
             parser=configparser.ConfigParser,
@@ -298,70 +286,67 @@ class ConfigFetch(object):
 
     def _parse_option(self, section, option):
         value = section[option]
-        argparse_args, value = self._parse_argparse_args(value)
-        func, value = self._parse_func(value)
+        args, value = self._parse_args(value)
 
         section[option] = value
-        if argparse_args:
-            self._ctx[option]['args'] = argparse_args
-        if func:
-            self._ctx[option]['func'] = func
+        if args:
+            func = args.pop('func', None)
+            if func:
+                self._ctx[option]['func'] = func
+            self._ctx[option]['args'] = args
 
-    def _parse_argparse_args(self, value):
-        args = {}
+    def _parse_args(self, value):
         help_ = []
+        args = {}
         option_value = []
-        state = 'root'  # root -> (help) -> (args) -> value
+        state = 'root'  # root -> (help) -> (args) -> (func) -> value
+        error_fmt = 'Invalid line at: %r'
 
-        print(value)
         for line in value.split('\n'):
+            if line.strip() == '' and state not in ('help', 'value'):
+                continue
+
             m = self._help_re.match(line)
             if m:
                 if state not in ('root', 'help'):
-                    raise ValueError('Invalid config line: %s' % line)
+                    raise OptionParseError(error_fmt % line)
                 state = 'help'
                 help_.append(m.group(1))
                 continue
 
             m = self._args_re.match(line)
             if m:
-                if state not in ('help', 'args'):
-                    raise ValueError('Invalid config line: %s' % line)
-                state = 'args'
+                if not m.group(1):
+                    raise OptionParseError(error_fmt % line)
+
                 key, val = m.group(1).split(':', maxsplit=1)
-                key, val = self._convert_argparse_arg(key, val)
+                key, val = self._convert_arg(key, val)
+                if key != 'func':
+                    if state not in ('help', 'args'):
+                        raise OptionParseError(error_fmt % line)
+                    state = 'args'
+                else:
+                    if state not in ('root', 'help', 'args'):
+                        raise OptionParseError(error_fmt % line)
+                    state = 'func'
                 args[key] = val
                 continue
 
             state = 'value'
             option_value.append(line.strip())
 
-        if not help_:
-            return {}, value
+        option_value = '\n'.join(option_value)
+        if help_:
+            args['help'] = '\n'.join(help_)
+        return args, option_value
 
-        args['help'] = '\n'.join(help_)
-        return args, '\n'.join(option_value)
-
-    def _convert_argparse_arg(self, key, val):
+    def _convert_arg(self, key, val):
         key, val = key.strip(), val.strip()
-        if key in ('names', 'choices'):
+        if key in self.ARGS_SHORTNAMES:
+            key = self.ARGS_SHORTNAMES[key]
+        if key in ('names', 'choices', 'func'):
             return key, _parse_comma(val)
         return key, val
-
-    def _parse_func(self, value):
-        func_regex = _make_func_regex(_REGISTRY)
-
-        func = []
-        while True:
-            match = func_regex.match(value)
-            if match:
-                # ``match.groups()`` should be ``None``'s except one.
-                f = [g for g in match.groups() if g][0]
-                func.append(f)
-                value = value[match.end():]
-            else:
-                break
-        return func, value
 
     # TODO:
     # Invalidate section names this class reserves.
