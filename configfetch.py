@@ -24,13 +24,12 @@ _STRING_RE = re.compile(r"""(["'])(.+)\1$""")
 
 
 class Error(Exception):
-    """Base Exception class for the module.
+    """Base Exception class for the module."""
 
-    ``configparser`` has 11 custom Exceptions scattered in 14 methods,
-    the last time I checked.
-    I'm not going to wrap except the most relevant ones.
-    """
 
+# ``configparser`` has 11 custom Exceptions scattered in 14 methods,
+# the last time I checked.
+# I'm not going to wrap except the most relevant ones.
 
 class NoSectionError(Error, configparser.NoSectionError):
     """Raised when no section is found."""
@@ -75,10 +74,7 @@ def _parse_line(value):
 
 
 class Func(object):
-    """Register and apply value conversions.
-
-    Normally always initialized and called from main classes internally.
-    """
+    """Register and apply value conversions."""
 
     def __init__(self, name, ctx, fmts):
         self.name = name
@@ -331,31 +327,35 @@ class OptionParser(object):
 class ConfigFetch(object):
     """A custom Configuration object.
 
-    It keeps two ``ConfigParser`` object (``_config`` and ``_ctxs``).
+    It keeps a ``ConfigParser`` object (``_config``)
+    and a correspondent option-name-to-metadata map (``_ctx``).
 
-    ``_config`` is an ordinary one.
-    ``_ctxs`` is one which keeps function names for each option.
-    Option access returns a value already functions applied.
+    The metadata includes function list specific to the option name (global).
+    Option access returns a functions-applied-value.
 
-    It also has ``argparse.Namespace`` object (args),
-    and Environment variable dictionay (envs).
+    It also has ``argparse.Namespace`` object (``args``),
+    and Environment variable dictionay (``envs``).
 
-    They are global, having no concept of sections.
+    They are also global, having no concept of sections.
     If the option name counterpart is defined,
     their value precedes the config value.
 
+    Functions are similarly applied.
 
     The class ``__init__`` should accept
     all ``ConfigParser.__init__`` keyword arguments.
+
     The class specific argumants are:
 
     :param fmts: dictionay ``Func._fmt`` uses
     :param args: ``argparse.Namespace`` object,
         already commandline arguments parsed
-    :param envs: dictionary with Environment Variable name and value
+    :param envs: dictionary with option name and Environment Variable name
         as key and value
     :param Func: ``Func`` or subclasses, keep actual functions
-    :param parser: ``ConfigParser`` or subclasses,
+    :param optionparser: ``OptionParser`` or a subclass,
+        parse option value string and build actual value and metadata
+    :param parser: ``ConfigParser`` or a subclass,
         keep actual config data
     """
 
@@ -382,14 +382,15 @@ class ConfigFetch(object):
         :param format: 'fini', 'ini' or ``None``
 
         If ``format`` is 'fini',
-        read config values, and function definitions ([=SOMETHING]).
-        Previous definitions are overwritten, if any.
+        read config values and metadata.
+        Previous metadata definitions are overwritten, if any.
 
         If ``format`` is 'ini' (or actually any other string than 'fini'),
-        read only config values, definitions are kept intact.
+        read only config values, just using the ``ConfigParser`` or a subclass.
+        Metadata are kept intact, if any.
 
         If ``format`` is ``None`` (default),
-        only when the definitions dict (``_ctxs``) is blank,
+        only when the metadata dict (``_ctxs``) is blank,
         read the file as 'fini'
         (supposed to be the first time read).
         Otherwise read the file as 'ini'.
@@ -422,18 +423,38 @@ class ConfigFetch(object):
             self._ctx = optionparser.parse()
 
     def set_arguments(self, argument_parser, sections=None):
+        """Run ``argument_parser.add_argument`` according to config metadata.
+
+        :param argument_parser: ``argparse.ArgumentParser`` or a subclass,
+            either blank or with some arguments already defined
+        :param sections: a section name (string) or section list
+            to filter sections, default (``None``) is for all sections
+
+        :returns: argument_parser
+
+        The usage is a bit complex, though. Normally:
+
+        1. Instantiate ``ConfigFetch`` with blank ``arg``.
+        2. Create ``ArgumentParser``, edit as necessary.
+        3. ``.set_arguments`` (populate ``ArgumentParser`` with metadata).
+        4. Parse commandline (``ArgumentParser.parse_args``).
+        5. ``.set_args`` below with the new ``args``.
+        """
         optionparser = self._optionparser(self._config, self._ctx)
         optionparser.build(argument_parser, sections)
         return argument_parser
 
     def set_args(self, namespace):
+        """Set ``_args`` attribute.
+
+        :param namespace: ``argparse.Namespace`` object
+
+        It manually sets ``_args`` again, after initialization.
+        """
         self._args = namespace
 
-    # TODO:
-    # Invalidate section names this class reserves.
-    # cf.
-    # >>> set(dir(configfetch.fetch(''))) - set(dir(object()))
-
+    # TODO: Invalidate attribute names this class uses.
+    # cf. set(dir(configfetch.fetch(''))) - set(dir(object()))
     def __getattr__(self, section):
         if section in self._cache:
             return self._cache[section]
@@ -474,8 +495,6 @@ class SectionProxy(object):
 
     # Introduce small indirection,
     # in case it needs special section manipulation in user subclasses.
-    # ``None`` option case must be provided
-    # for section verification in `__init__()`.
     def _get_section(self, option=None):
         return self.name
 

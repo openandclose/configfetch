@@ -12,6 +12,10 @@ in that order.
 
 All data accesses are done by ``dot access`` or ``.get()`` method.
 
+Optionally, the custom format can register directives
+to build commandline arguments
+(arguments for ``argparse.ArgumentParser.add_argument``).
+
 
 Installation
 ------------
@@ -30,58 +34,45 @@ Usage
 
     ## myapp.ini
     [main]
-    log=        [=BOOL] no
-    users=      [=COMMA] Alice, Bob, Charlie
-    output=     html
+    log=        :: f: bool
+                no
 
-    # terminal
+    users=      :: f: comma
+                Alice, Bob, Charlie
+
+    output=     : output format                 <-- help
+                : when saving data
+                : to a file.
+                :: names: o                     <-- other arguments
+                :: choices: ht, xht, x              for argparse
+                :: default: x
+                :: f: add_m, add_l              <-- functions
+                ht                              <-- config value
+
+    ## terminal
     >>> import configfetch
     >>> conf = configfetch.fetch('myapp.ini')
     >>> conf.main.log
     False
     >>> conf.main.users
     ['Alice', 'Bob', 'Charlie']
-    >>> conf.output
+    >>> conf.main.output
     'html'
 
-The file has optional ``[=SOMETHING]`` notations
+The file has optional ``:: f: something`` notations
 before each option value,
-which registers ``_something()`` function for this particular option.
+which registers ``something`` function for this particular option.
 
-Let's call this customized format as ``Fetch-INI`` or ``FINI`` format.
+Other strange (I admit) ``': '`` and ``':: '`` notations are
+for building ``argparse`` arguments.
+If you don't need to build the arguments, you don't need them.
 
-Let's call this new configuration object as ``conf``,
-as opposed to ``config``, the original ``INI`` configuration object.
+---
 
+From now on, I call this customized format, as ``Fetch-INI`` or ``FINI`` format.
 
-Limitations
------------
-
-*Manual Arguments Building*
-
-While the script can *parse* commandline arguments automatically,
-it is the same as before, in that
-you have to manually register each argument with ``ArgumentParser``, e.g.::
-
-    parser.add_argument('--output')
-
-*ConfigParser.converters*
-
-ConfigParser already has a value conversion mechanism
-(`.converters <https://docs.python.org/3/library/configparser.html#customizing-parser-behaviour>`__).
-In this, it is the caller who has to designate appropriate functions,
-``.getint()``, ``.getsomething()``, etc.
-Maybe this is good enough for many cases.
-
-*Function Arguments*
-
-Users can customize their own functions.
-But precisely because our only interfaces are
-``dot access`` and ``.get()``,
-functions can't accept arguments other than
-miscellaneous internal config values.
-So they need some workarounds in that case.
-(e.g. create custom functions with arguments already internalized.)
+I call this new configuration object as ``conf``,
+to differentiate from the original ``INI`` configuration object, ``config``.
 
 
 API Overview
@@ -97,9 +88,9 @@ class ``ConfigFetch``
 class ``Func``
     Keep conversion functions and apply them to values.
 
-    See `Func <api.html#configfetch.Func>`__ for the builtin Functions.
+    See `Builin Function <#builtin-functions>`__ for included functions.
 
-    See `User Functions <#user-functions>`__ for customization.
+    See `User Functions <#user-functions>`__ for customization example.
 
 function ``fetch``
     Shortcut. Using ``ConfigFetch``, return ``conf`` object.
@@ -197,7 +188,8 @@ by conforming to the designated ``FINI`` format. E.g.
 .. code:: none
 
     # myapp.ini
-    file=   [COMMA] a.txt, b.txt, c.txt
+    file=   :: f: comma
+            a.txt, b.txt, c.txt
 
     # myapp.py
     parser.add_argument('--file', action='store')
@@ -236,11 +228,7 @@ left to right in order, then the resultant value is *returned*.
 Function
 ^^^^^^^^
 
-Function names must start with ``'_'``.
-
-The matching string is made from one in ``FINI`` file,
-adding this ``'_'``, and converting to lowercase. E.g.
-``[=SOMETHING]`` to ``_something``.
+Function names are searched in ``Func`` or a subclass methods.
 
 Functions always have one argument ``value``, that is a *selected* value.
 And they return one value.
@@ -271,14 +259,14 @@ each function expects.
 Builtin Functions
 -----------------
 
-All builtin functions except ``_bar()``, expect ``value`` as a string,
+All builtin functions except ``bar``, expect ``value`` as a string,
 so they should come in first.
 
-``_bar()`` expects an list type ``value``,
+``bar`` expects an list type ``value``,
 so it should come the second or after.
-(usually immediately after ``_comma()`` or ``_line()``.)
+(usually immediately after ``comma`` or ``line``.)
 
-.. method:: _bool(value)
+.. method:: bool(value)
 
     return ``True`` or ``False``,
     according to the same rule as ``configparser``'s.
@@ -288,7 +276,7 @@ so it should come the second or after.
     | Case insensitive.
     | Other values raise an error.
 
-.. method:: _comma(value)
+.. method:: comma(value)
 
     Return a list using comma as separators.
     No comma value returns one element list.
@@ -297,7 +285,7 @@ so it should come the second or after.
     Heading and tailing whitespaces are stripped
     from each element.
 
-.. method:: _line(value)
+.. method:: line(value)
 
     Return a list using line break as separators.
     No line break value returns one element list.
@@ -306,7 +294,7 @@ so it should come the second or after.
     Heading and tailing whitespaces and *commas* are stripped
     from each element.
 
-.. method:: _bar(value)
+.. method:: bar(value)
 
     Concatenate with bar (``'|'``).
 
@@ -317,14 +305,15 @@ so it should come the second or after.
 
     .. code::
 
-        scheme=     [=COMMA][=BAR] https?, ftp, mailto
+        scheme=     :: f: comma, bar
+                    https?, ftp, mailto
 
     .. code:: python
 
         >>> conf.main.scheme
         'https?|ftp|mailto'
 
-.. method:: _cmd(value)
+.. method:: cmd(value)
 
     Return a list of strings
     ready to put in `subprocess <https://docs.python.org/3/library/subprocess.html>`__.
@@ -337,21 +326,22 @@ so it should come the second or after.
 
     .. code::
 
-        command=    [=CMD] ls -l 'Live at the Apollo' # 1968
+        command=    :: f: cmd
+                    ls -l 'Live at the Apollo' # 1968
 
     .. code:: python
 
         >>> conf.main.command
         ['ls', '-l', 'Live at the Apollo']
 
-.. method:: _cmds(value)
+.. method:: cmds(value)
 
     Return a list of list of strings.
 
-    List version of ``_cmd``.
-    The input value is a list of strings, with each item made to a list by ``_cmd``.
+    List version of ``cmd``.
+    The input value is a list of strings, with each item made to a list by ``cmd``.
 
-.. method:: _fmt(value)
+.. method:: fmt(value)
 
     return a string processed by ``str.format``, using ``fmts`` dictionary.
     E.g.
@@ -359,7 +349,8 @@ so it should come the second or after.
     .. code::
 
         # myapp.ini
-        css=        [=FMT] {USER}/data/my.css
+        css=        :: f: fmt
+                    {USER}/data/my.css
 
     .. code:: python
 
@@ -371,7 +362,7 @@ so it should come the second or after.
         >>> conf.main.css
         '/home/john/data/my.css'
 
-.. method:: _plus(value)
+.. method:: plus(value)
 
     receive ``value`` as argument, but actually it doesn't use this,
     and use ``values`` (a ``[arg, env, opt]`` list before selection) instead.
@@ -382,7 +373,7 @@ so it should come the second or after.
 
     It reads each value in ``values`` in order, and:
 
-    1) It makes a list using the same mechanism as ``_comma()``.
+    1) It makes a list using the same mechanism as ``comma``.
     2) If items in the list are all ``normal items``,
        then the list overwrites the previous list.
     3) If they consist only of ``plus items`` or ``minus items``,
@@ -390,7 +381,7 @@ so it should come the second or after.
        and subtracts ``minus items`` from, the previous list.
     4) Otherwise (mixing cases), it raises error.
 
-    Adding existing items, or subtracting nonexistant items doesn't cause errors.
+    Adding existing items, or subtracting nonexistent items doesn't cause errors.
     It just ignores them.
 
     Example:
@@ -419,7 +410,8 @@ Example:
 
     ## myapp.ini
     [main]
-    search=     [=GLOB] python
+    search=     :: f: glob
+                python
 
 .. code:: python
 
@@ -429,7 +421,7 @@ Example:
     class MyFunc(configfetch.Func):
 
         @configfetch.register
-        def _glob(self, value):
+        def glob(self, value):
             if not value.startswith('*'):
                 value = '*' + value
             if not value.endswith('*'):
@@ -447,6 +439,138 @@ Example:
     '*python*'
 
 
+FINI Syntax
+-----------
+
+``FINI`` uses ``': '`` and ``':: '`` as keywords,
+designating metadata line (a space is required).
+It is configurable on subclasses.
+
+All metadata types are optional, but must follow the predetermined order. ::
+
+    (help)
+    (args)
+    (func)
+    value
+
+``args`` means here, arguments for ``argparse.ArgumentParser.add_argument``.
+``help`` is actually one of them, but specially treated.
+
+help:
+    Following string from ``': '`` is ``help``.
+    You can repeat ``help`` on several lines.
+    Strings are joined with newlines.
+
+args:
+    ``':: <name>: <value>'`` is parsed into a dictionary item,
+    with some value type conversion,
+    if ``<name>`` is not ``'f'``.
+
+    ``<name>`` should be key for the argument (nargs, choices, etc.).
+    special ``<name>`` ``'names'`` is used for
+    `name or flags <https://docs.python.org/3/library/argparse.html#name-or-flags>`__,
+    with the option name added to the last.
+    (``'output'`` option in the `Usage <#usage>`__ of the document top
+    becomes ``'-o', '--output'``).
+
+func:
+    Following string from ``':: f: '`` is comma separated function names
+    to process the option value.
+
+value:
+    actual option value.
+
+
+Configuring Arguments
+---------------------
+
+Excluding Environment Variables,
+there are three kinds of option types.
+
+1. Config-only options
+2. Commandline-only options
+3. Common options (to commandline and config file)
+
+1:
+
+If you don't provide ``help`` to an option,
+it is not exposed for building process.
+So that makes 1. config-only options.
+
+2:
+
+If you provide ``help``, but you don't provide or ignore the config option
+(separating it in a specially chosen section, say,
+``'[_command_only]'``),
+which make 2. commandline-only options.
+
+For this, since it is unrelated to the ``INI`` config options,
+you can use any ``add_argument`` arguments.
+
+But data types have to be guessed
+from ``INI`` string values none the less,
+only simple cases are feasible
+(E.g. In ``':: const: 1'``, is ``'1'`` ``int`` or ``str`` ?)
+
+See source code (``OptionParser._convert_arg``) for details.
+
+3:
+
+For all common options:
+
+    * As already said, ``help`` is required.
+    * You can always add ``names``.
+
+For Flags:
+
+For common options which have ``bool`` in ``func``,
+arguments are automatically supplied.
+
+.. code:: ini
+
+    log=    : log events
+            :: f: bool
+            yes
+
+becomes:
+
+.. code:: python
+
+    [...].add_argument('--log', action='store_const', const='yes')
+
+``action`` is always ``store_const``,
+``const`` value is the config option value
+(which will be converted to ``True`` or ``False``,
+when getting value).
+
+Only to make the opposite flags, you can add ``dest`` argument.
+
+.. code:: ini
+
+    no_log=     : do not log events
+                :: dest: log
+                :: f: bool
+                no
+
+becomes:
+
+.. code:: python
+
+    [...].add_argument('--no-log', action='store_const', const='no', dest='log')
+
+For Non-Flags:
+
+Other common options are all treated as ``action='store', nargs=None``,
+which is ``argparse`` default.
+Optionally you can only add ``choices``.
+
+
+Building Arguments
+------------------
+
+To actually build arguments, see `set_arguments <#configfetch.ConfigFetch.set_arguments>`__.
+
+
 API
 ---
 
@@ -455,19 +579,6 @@ ConfigFetch
 
 .. autoclass:: configfetch.ConfigFetch
     :members:
-
-Note:
-
-You can select custom ``ConfigParser`` object for ``_config``,
-by argument ``parser``,
-but ``_ctxs`` is hard-coded to use an ordinary ``ConfigParser``.
-It may interfere with something.
-
-Regardless of ``use_dash`` argument, ``argparse`` does this
-dash-to-underscore conversion for their own argument names.
-So it is normally better to keep it ``True``,
-and maintain correspondence.
-
 
 fetch
 ^^^^^
@@ -491,8 +602,8 @@ according to the uniderlined ``ConfigParser`` object
 (``conf._config``).
 
 
-minusadapter()
-^^^^^^^^^^^^^^
+minusadapter
+^^^^^^^^^^^^
 
 .. autofunction:: configfetch.minusadapter
 
