@@ -76,22 +76,22 @@ class Func(object):
         self._fmts = fmts
 
     @register
-    def _bool(self, value):
+    def bool(self, value):
         if value.lower() not in self.BOOLEAN_STATES:
             raise ValueError('Not a boolean: %s' % value)
         return self.BOOLEAN_STATES[value.lower()]
 
     @register
-    def _comma(self, value):
+    def comma(self, value):
         return _parse_comma(value)
 
     @register
-    def _line(self, value):
+    def line(self, value):
         return _parse_line(value)
 
     @register
-    def _bar(self, value):
-        """Concatenate with bar (``'|'``).
+    def bar(self, value):
+        """Concatenate with ``'|'``.
 
         Receive a list of strings as ``value``, return a string.
         """
@@ -104,22 +104,22 @@ class Func(object):
             return ''
 
     @register
-    def _cmd(self, value):
+    def cmd(self, value):
         """Return a list of strings, useful for ``subprocess`` (stdlib)."""
         return shlex.split(value, comments='#')
 
     @register
-    def _cmds(self, value):
+    def cmds(self, value):
         """List version of ``_cmd``."""
-        return [self._cmd(v) for v in value]
+        return [self.cmd(v) for v in value]
 
     @register
-    def _fmt(self, value):
+    def fmt(self, value):
         """Return a string processed by ``str.format``."""
         return value.format(**self._fmts)
 
     @register
-    def _plus(self, value):
+    def plus(self, value):
         """Implement ``plusminus option`` (my neologism).
 
         Main logic is in `_get_plusminus_values`.
@@ -154,7 +154,7 @@ class Func(object):
         return [getattr(self, fn) for fn in funcnames]
 
     def _ctx_to_funcname_map(self, name):
-        return '_' + name
+        return name
 
     def _format_value(self, option, values, func):
         value = self._get_value(values)
@@ -538,7 +538,7 @@ class Double(object):
 
     def __getattr__(self, option):
         funcnames = self.sec._get_funcname(option)
-        if funcnames == ['_plus']:
+        if funcnames == ['plus']:
             return self._get_plus_value(option)
         else:
             return self._get_value(option)

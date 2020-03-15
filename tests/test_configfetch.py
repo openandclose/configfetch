@@ -470,7 +470,7 @@ class _CustomFunc(configfetch.Func):
     """Used the test below."""
 
     @configfetch.register
-    def _custom(self, value):
+    def custom(self, value):
         return 'test'
 
 
