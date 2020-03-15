@@ -396,6 +396,9 @@ class ConfigFetch(object):
         optionparser.build(argument_parser, sections)
         return argument_parser
 
+    def set_args(self, namespace):
+        self._args = namespace
+
     # TODO:
     # Invalidate section names this class reserves.
     # cf.
