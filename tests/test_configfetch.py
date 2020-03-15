@@ -14,6 +14,17 @@ def f(string):
     return textwrap.dedent(string.strip('\n'))
 
 
+def _get_action(conf, option_strings):
+    parser = argparse.ArgumentParser(prog='test')
+    conf.set_arguments(parser)
+    # parser.print_help()
+    for action in parser._get_optional_actions():
+        if option_strings in action.option_strings:
+            break
+    return action
+    raise ValueError('No action with option_strings: %r' % option_strings)
+
+
 class TestInheritance:
 
     def test_iter(self):
@@ -693,16 +704,6 @@ class TestParseArgs:
 
 class TestBuildArgs:
 
-    def _get_action(self, conf, option_strings):
-        parser = argparse.ArgumentParser(prog='test')
-        conf.set_arguments(parser)
-        # parser.print_help()
-        for action in parser._get_optional_actions():
-            if option_strings in action.option_strings:
-                break
-        return action
-        raise ValueError('No action with option_strings: %r' % option_strings)
-
     def test_help(self):
         data = f("""
         [sec1]
@@ -711,7 +712,7 @@ class TestBuildArgs:
              xxx1, xxx2
         """)
         conf = fetch(data)
-        action = self._get_action(conf, '--aa')
+        action = _get_action(conf, '--aa')
         assert isinstance(action, argparse._StoreAction)
         assert action.help == 'help string'
 
@@ -723,7 +724,7 @@ class TestBuildArgs:
              tt
         """)
         conf = fetch(data)
-        action = self._get_action(conf, '--aa')
+        action = _get_action(conf, '--aa')
         assert isinstance(action, argparse._StoreAction)
         assert action.choices == ['ss', 'tt']
 
@@ -735,7 +736,7 @@ class TestBuildArgs:
              true
         """)
         conf = fetch(data)
-        action = self._get_action(conf, '--aa')
+        action = _get_action(conf, '--aa')
         assert isinstance(action, argparse._StoreAction)
         assert action.option_strings == ['-a', '--aa']
 
@@ -747,7 +748,7 @@ class TestBuildArgs:
              yes
         """)
         conf = fetch(data)
-        action = self._get_action(conf, '--aa')
+        action = _get_action(conf, '--aa')
         assert isinstance(action, argparse._StoreConstAction)
         assert action.const == 'yes'
 
@@ -769,3 +770,42 @@ class TestBuildArgs:
         assert namespace.__dict__['aa'] == 'yes'
         namespace = parser.parse_args(['--no-aa'])
         assert namespace.__dict__['aa'] == 'no'
+
+
+class TestBuildArgsCommandlineOnly:
+
+    def test_int(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: default: 1
+             xxx
+        """)
+        conf = fetch(data)
+        action = _get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.default == 1
+
+    def test_int_like_string(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: default: '1'
+             xxx
+        """)
+        conf = fetch(data)
+        action = _get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.default == '1'
+
+    def test_type(self):
+        data = f("""
+        [sec1]
+        aa = : help string
+             :: type: int
+             42
+        """)
+        conf = fetch(data)
+        action = _get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.type == int

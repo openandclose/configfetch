@@ -9,11 +9,18 @@ import re
 import shlex
 import sys
 
-_UNSET = object()
-
 # Record available function names for value conversions.
 # After the module initialization, this list is populated.
 _REGISTRY = set()
+
+_UNSET = object()
+
+BOOLEAN_STATES = {  # the same as ConfigParser.BOOLEAN_STATES
+    '1': True, 'yes': True, 'true': True, 'on': True,
+    '0': False, 'no': False, 'false': False, 'off': False
+}
+
+_STRING_RE = re.compile(r"""(["'])(.+)\1$""")
 
 
 class Error(Exception):
@@ -46,6 +53,13 @@ def register(meth):
     return meth
 
 
+def _parse_bool(value):
+    value = value.lower()
+    if value not in BOOLEAN_STATES:
+        raise ValueError('Not a boolean: %s' % value)
+    return BOOLEAN_STATES[value]
+
+
 def _parse_comma(value):
     if value:
         return [val.strip()
@@ -66,10 +80,6 @@ class Func(object):
     Normally always initialized and called from main classes internally.
     """
 
-    BOOLEAN_STATES = {  # the same as ConfigParser.BOOLEAN_STATES
-        '1': True, 'yes': True, 'true': True, 'on': True,
-        '0': False, 'no': False, 'false': False, 'off': False}
-
     def __init__(self, name, ctx, fmts):
         self.name = name
         self._ctx = ctx
@@ -77,9 +87,7 @@ class Func(object):
 
     @register
     def bool(self, value):
-        if value.lower() not in self.BOOLEAN_STATES:
-            raise ValueError('Not a boolean: %s' % value)
-        return self.BOOLEAN_STATES[value.lower()]
+        return _parse_bool(value)
 
     @register
     def comma(self, value):
@@ -253,9 +261,31 @@ class OptionParser(object):
         key, val = key.strip(), val.strip()
         if key in self.ARGS_SHORTNAMES:
             key = self.ARGS_SHORTNAMES[key]
-        if key in ('names', 'choices', 'func'):
+        if key in ('nargs', 'const', 'default'):
+            return key, self._number_or_string(val)
+        if key in ('names', 'func'):
             return key, _parse_comma(val)
+        if key in ('choices',):
+            val = _parse_comma(val)
+            return key, [self._number_or_string(v) for v in val]
+        if key in ('required',):
+            return key, _parse_bool(val)
+        if key in ('type',):
+            return key, eval(val)
+        # action, help, metavar, dest
         return key, val
+
+    def _number_or_string(self, string):
+        try:
+            return int(string)
+        except ValueError:
+            try:
+                return float(string)
+            except ValueError:
+                m = _STRING_RE.match(string)
+                if m:
+                    return m.group(2)
+                return string
 
     def build(self, argument_parser, sections=None):
         if sections is None:
