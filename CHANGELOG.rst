@@ -3,6 +3,32 @@ Changelog
 =========
 
 
+v0.1.0 (2020-03-17)
+--------------------
+
+Changed significantly.
+Not compatible with the previous versions.
+
+**Change:**
+
+* Change function syntax, to follow argparse argument syntax
+  ('[=SOMETHING]' to ':: f: something').
+
+* Cut use_dash and use_uppercase arguments in ConfigFetch.__init__
+
+* Rename all builtin functions (stripping '_', '_comma' -> 'comma')
+
+**Add:**
+
+* Add 'cmds' builtin function
+
+* Add argparse argument syntax in FINI format
+
+* Add argparse argument building feature
+
+* Add Python3.8
+
+
 v0.0.9 (2019-02-25)
 -------------------
 
