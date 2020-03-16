@@ -3,46 +3,56 @@ Changelog
 =========
 
 
-v0.0.9
-------
+v0.0.9 (2019-02-25)
+-------------------
 
-* Added Python3.7
+**Add:**
 
-* Fixed _plus function (with a minute spec change).
+* Add Python3.7
 
-v0.0.8
-------
+**Fix:**
 
-* Fixed a grave bug in Double.
+* Fix _plus function (with a minute spec change)
+
+
+v0.0.8 (2018-11-24)
+-------------------
+
+**Fix:**
+
+* Fix a grave bug in Double.
   Child blank value had been overwriting parent value.
 
-v0.0.7
-------
 
-* Fixed a few mistakes around ``setup.py`` (for pypi).
+v0.0.7 (2018-05-13)
+-------------------
+
+**Fix:**
+
+* Fix a few mistakes around ``setup.py`` (for pypi).
   No changes in the code.
 
 
-v0.0.6
-------
+v0.0.6 (2018-05-13)
+-------------------
 
-API
-^^^
+**Change:**
 
-* Renamed builtin function name ``_path()`` to ``_fmt()``.
+* Rename builtin function name ``_path()`` to ``_fmt()``
 
-* Removed unused ``Func.__init__()`` argument ``conf``.
+* Remove unused ``Func.__init__()`` argument ``conf``
 
-others
-^^^^^^
+**Add:**
 
-* Added document (readthedocs).
+* Add document (readthedocs)
 
-* Improved value selection routine.
+**Fix:**
+
+* Improve value selection routine.
   Now errors should be more consistent.
 
 
-v0.0.5
-------
+v0.0.5 (2017-12-08)
+-------------------
 
 * First commit
