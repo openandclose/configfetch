@@ -285,6 +285,21 @@ so it should come the second or after.
     Heading and tailing whitespaces are stripped
     from each element.
 
+    If the previous character is ``'\'``,
+    ``','`` is a literal comma, not a separator.
+    This ``'\'`` is discarded.
+
+    Any other ``'\'`` is kept as is.
+
+    .. code::
+
+        'aa, bb'    ->      ['aa', 'bb']
+        r'aa\, bb'  ->      ['aa, bb']
+        r'aa\\, bb' ->      [r'aa\, bb'])
+
+        r'a\a'      ->      [r'a\a'])
+        r'a\\a'     ->      [r'a\\a'])
+
 .. method:: line(value)
 
     Return a list using line break as separators.
@@ -293,6 +308,8 @@ so it should come the second or after.
 
     Heading and tailing whitespaces and *commas* are stripped
     from each element.
+
+    The escaping behavior with ``'\'`` is the same as ``comma``.
 
 .. method:: bar(value)
 

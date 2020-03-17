@@ -59,18 +59,34 @@ def _parse_bool(value):
     return BOOLEAN_STATES[value]
 
 
+# following Mohammad Azim's advice
+# https://stackoverflow.com/a/43137914
+def _escaped_split(string, char):
+    out = []
+    part = []
+    escape = False
+    for c in string:
+        if c == char:
+            if escape:
+                part[-1] = c  # pop the last character ('\\'), and add 'char'
+            else:
+                out.append(part)
+                part = []
+        else:
+            part.append(c)
+        escape = (c == '\\')
+    if part:
+        out.append(part)
+    return [''.join(part) for part in out]
+
+
 def _parse_comma(value):
-    if value:
-        return [val.strip()
-                for val in value.split(',') if val.strip()] or []
-    return []
+    return [v.strip() for v in _escaped_split(value, ',') if v.strip()]
 
 
 def _parse_line(value):
-    if value:
-        return [val.strip(' ,')
-                for val in value.split('\n') if val.strip()] or []
-    return []
+    return [v.strip(' ,')
+        for v in _escaped_split(value, '\n') if v.strip(' ,')]
 
 
 class Func(object):

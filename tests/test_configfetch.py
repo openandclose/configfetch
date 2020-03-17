@@ -25,6 +25,47 @@ def _get_action(conf, option_strings):
     raise ValueError('No action with option_strings: %r' % option_strings)
 
 
+class TestEscapedSplit:
+
+    def check_comma(self, value, expected):
+        ret = configfetch._parse_comma(value)
+        assert ret == expected
+
+    def check_line(self, value, expected):
+        ret = configfetch._parse_line(value)
+        assert ret == expected
+
+    def test_comma(self):
+        self.check_comma('aaaa', ['aaaa'])
+        self.check_comma(r'\aaaa', [r'\aaaa'])
+        self.check_comma(r'aa\aa', [r'aa\aa'])
+        self.check_comma(r'aaa\a', [r'aaa\a'])
+        self.check_comma(r'aaaa\\', [r'aaaa\\'])
+
+        self.check_comma(r'aa\\aa', [r'aa\\aa'])
+        self.check_comma(r'aa\\\aa', [r'aa\\\aa'])
+
+        self.check_comma('aa, bb', ['aa', 'bb'])
+        self.check_comma(r'aa\, bb', ['aa, bb'])
+        self.check_comma(r'aa\\, bb', [r'aa\, bb'])
+        self.check_comma(r'aa\\\, bb', [r'aa\\, bb'])
+
+        self.check_comma(r'aa\a, bb', [r'aa\a', 'bb'])
+        self.check_comma(r'aa\\a, bb', [r'aa\\a', 'bb'])
+        self.check_comma(r'aa\\\a, bb', [r'aa\\\a', 'bb'])
+
+        self.check_comma(',aa', ['aa'])
+        self.check_comma('aa,', ['aa'])
+        self.check_comma('aa,,', ['aa'])
+
+    def test_line(self):
+        self.check_line('aa\nbb', ['aa', 'bb'])
+        self.check_line('aa\\\nbb', ['aa\nbb'])
+        self.check_line('aa\\\\\nbb', ['aa\\\nbb'])
+        self.check_line('aa\\\\\\\nbb', ['aa\\\\\nbb'])
+
+        self.check_line('aa\nbb,', ['aa', 'bb'])
+
 class TestInheritance:
 
     def test_iter(self):
