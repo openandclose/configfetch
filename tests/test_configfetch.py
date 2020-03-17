@@ -64,7 +64,7 @@ class TestEscapedSplit:
         self.check_line('aa\\\\\nbb', ['aa\\\nbb'])
         self.check_line('aa\\\\\\\nbb', ['aa\\\\\nbb'])
 
-        self.check_line('aa\nbb,', ['aa', 'bb'])
+        self.check_line('aa\nbb,', ['aa', 'bb,'])
 
 class TestInheritance:
 

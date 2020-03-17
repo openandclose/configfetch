@@ -85,8 +85,7 @@ def _parse_comma(value):
 
 
 def _parse_line(value):
-    return [v.strip(' ,')
-        for v in _escaped_split(value, '\n') if v.strip(' ,')]
+    return [v.strip() for v in _escaped_split(value, '\n') if v.strip()]
 
 
 class Func(object):
