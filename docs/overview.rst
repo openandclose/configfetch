@@ -555,12 +555,11 @@ becomes:
 
     [...].add_argument('--log', action='store_const', const='yes')
 
-``action`` is always ``store_const``,
-``const`` value is the config option value
-(which will be converted to ``True`` or ``False``,
-when getting value).
+``action`` is always ``store_const``, ``const`` is 'yes'
+(which will be converted to ``True`` when getting value).
 
 Only to make the opposite flags, you can add ``dest`` argument.
+If there is ``dest``, ``const`` is 'no' (converted to ``False``).
 
 .. code:: ini
 

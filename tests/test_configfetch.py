@@ -812,6 +812,37 @@ class TestBuildArgs:
         namespace = parser.parse_args(['--no-aa'])
         assert namespace.__dict__['aa'] == 'no'
 
+    def test_bool_default_no(self):
+        data = f("""
+        [sec1]
+        overwrite = : help string
+                    :: f: bool
+                    no
+        """)
+        conf = fetch(data)
+        action = _get_action(conf, '--overwrite')
+        assert isinstance(action, argparse._StoreConstAction)
+        assert action.const == 'yes'
+
+    def test_bool_opposite_default_no(self):
+        data = f("""
+        [sec1]
+        overwrite =     : help string
+                        :: f: bool
+                        no
+        no_overwrite =  : help string2
+                        :: dest: overwrite
+                        :: f: bool
+                        yes
+        """)
+        conf = fetch(data)
+        parser = argparse.ArgumentParser(prog='test')
+        conf.set_arguments(parser)
+        namespace = parser.parse_args(['--overwrite'])
+        assert namespace.__dict__['overwrite'] == 'yes'
+        namespace = parser.parse_args(['--no-overwrite'])
+        assert namespace.__dict__['overwrite'] == 'no'
+
 
 class TestBuildArgsCommandlineOnly:
 

@@ -318,9 +318,10 @@ class OptionParser(object):
 
         func = self._ctx.get(option, {}).get('func')
         if func and 'bool' in func:
+            const = 'no' if args.get('dest') else 'yes'
             bool_arg = {
                 'action': 'store_const',
-                'const': self._config.get(section, option),
+                'const': const,
             }
             args.update(bool_arg)
         parser.add_argument(*names, **args)
