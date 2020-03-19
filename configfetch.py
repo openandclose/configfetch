@@ -219,8 +219,10 @@ class OptionParser(object):
         args, value = self._parse_args(value)
 
         section[option] = value
-        if args:
-            self._ctx[option] = args
+        if args['argparse']:
+            self._ctx[option]['argparse'] = args['argparse']
+        if args['func']:
+            self._ctx[option]['func'] = args['func']
 
     def _parse_args(self, value):
         help_ = []
