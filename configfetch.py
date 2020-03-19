@@ -2,7 +2,7 @@
 """Helper to get values from configparser and argparse."""
 
 import argparse
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 import configparser
 import os
 import re
@@ -220,13 +220,17 @@ class OptionParser(object):
 
         section[option] = value
         if args['argparse']:
+            if not self._ctx.get(option):
+                self._ctx[option] = {}
             self._ctx[option]['argparse'] = args['argparse']
         if args['func']:
+            if not self._ctx.get(option):
+                self._ctx[option] = {}
             self._ctx[option]['func'] = args['func']
 
     def _parse_args(self, value):
         help_ = []
-        args = defaultdict(dict)
+        args = {'argparse': {}, 'func': {}}
         option_value = []
         state = 'root'  # root -> (help) -> (argparse) -> (func) -> value
         error_fmt = 'Invalid line at: %r'
@@ -392,7 +396,7 @@ class ConfigFetch(object):
         self._Func = Func
         self._optionparser = optionparser
         self._parser = parser
-        self._ctx = defaultdict(dict)  # option -> metadata dict
+        self._ctx = {}  # option -> metadata dict
         self._cache = {}  # SectionProxy object cache
 
         self._optionxform = self._get_optionxform()
