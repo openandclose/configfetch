@@ -279,19 +279,22 @@ class OptionParser(object):
         key, val = key.strip(), val.strip()
         if key in self.ARGS_SHORTNAMES:
             key = self.ARGS_SHORTNAMES[key]
+        return key, self._convert_arg_value(key, val)
+
+    def _convert_arg_value(self, key, val):
         if key in ('nargs', 'const', 'default'):
-            return key, self._number_or_string(val)
+            return self._number_or_string(val)
         if key in ('names', 'func'):
-            return key, _parse_comma(val)
+            return _parse_comma(val)
         if key in ('choices',):
             val = _parse_comma(val)
-            return key, [self._number_or_string(v) for v in val]
+            return [self._number_or_string(v) for v in val]
         if key in ('required',):
-            return key, _parse_bool(val)
+            return _parse_bool(val)
         if key in ('type',):
-            return key, eval(val)
+            return eval(val)
         # action, help, metavar, dest
-        return key, val
+        return val
 
     def _number_or_string(self, string):
         try:
