@@ -268,6 +268,7 @@ class OptionParser(object):
         option_value = '\n'.join(option_value)
         if help_:
             args['argparse']['help'] = '\n'.join(help_)
+        self._set_argparse_suppress(args)
         return args, option_value
 
     def _convert_arg(self, key, val):
@@ -299,6 +300,11 @@ class OptionParser(object):
                 if m:
                     return m.group(2)
                 return string
+
+    def _set_argparse_suppress(self, args):
+        for key, val in args['argparse'].items():
+            if val == 'argparse.SUPPRESS':
+                args['argparse'][key] = argparse.SUPPRESS
 
     def build(self, argument_parser, sections=None):
         if sections is None:

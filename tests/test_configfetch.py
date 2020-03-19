@@ -881,3 +881,18 @@ class TestBuildArgsCommandlineOnly:
         action = _get_action(conf, '--aa')
         assert isinstance(action, argparse._StoreAction)
         assert action.type == int
+
+    def test_suppress(self):
+        data = f("""
+        [DEFAULT]
+        aa = : argparse.SUPPRESS
+             :: default: argparse.SUPPRESS
+        [sec1]
+        aa = xxx
+        """)
+        conf = fetch(data)
+        action = _get_action(conf, '--aa')
+        assert isinstance(action, argparse._StoreAction)
+        assert action.help == argparse.SUPPRESS
+        assert action.default == argparse.SUPPRESS
+        assert conf.sec1.aa == 'xxx'
