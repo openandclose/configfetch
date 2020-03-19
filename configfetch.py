@@ -282,21 +282,39 @@ class OptionParser(object):
         return key, self._convert_arg_value(key, val)
 
     def _convert_arg_value(self, key, val):
-        if key in ('nargs', 'const', 'default'):
-            return self._number_or_string(val)
-        if key in ('names', 'func'):
-            return _parse_comma(val)
-        if key in ('choices',):
-            val = _parse_comma(val)
-            return [self._number_or_string(v) for v in val]
-        if key in ('required',):
-            return _parse_bool(val)
-        if key in ('type',):
-            return eval(val)
-        # action, help, metavar, dest
+        arg_type = {
+            'names': 'comma',
+            'action': '',
+            'nargs': 'number',
+            'const': 'number, bool',
+            'default': 'number, bool',
+            'type': 'eval',
+            'choices': 'comma, number',
+            'required': 'bool',
+            'help': '',
+            'metavar': '',
+            'dest': '',
+            'func': 'comma',
+        }
+        for conv in arg_type[key].split(','):
+            conv = conv.strip()
+            if not conv:
+                continue
+            if conv == 'comma':
+                val = _parse_comma(val)
+            if conv == 'number':
+                val = self._number_or_string(val)
+            if conv == 'bool':
+                val = self._bool_or_string(val)
+            if conv == 'eval':
+                val = eval(val)
         return val
 
     def _number_or_string(self, string):
+        # 'string' may be string or a list of string
+        if isinstance(string, list):
+            return [self._number_or_string(s) for s in string]
+
         try:
             return int(string)
         except ValueError:
@@ -307,6 +325,14 @@ class OptionParser(object):
                 if m:
                     return m.group(2)
                 return string
+
+    def _bool_or_string(self, something):
+        # something may be string, int or float (or other)
+        if something == 'True':
+            return True
+        if something == 'False':
+            return False
+        return something
 
     def _set_argparse_suppress(self, args):
         for key, val in args['argparse'].items():
