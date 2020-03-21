@@ -15,9 +15,11 @@ _REGISTRY = set()
 
 _UNSET = object()
 
-BOOLEAN_STATES = {  # the same as ConfigParser.BOOLEAN_STATES
+# ConfigParser.BOOLEAN_STATES and ``None``
+BOOLEAN_STATES = {
     '1': True, 'yes': True, 'true': True, 'on': True,
     '0': False, 'no': False, 'false': False, 'off': False,
+    '': None,
 }
 
 _STRING_RE = re.compile(r"""(["'])(.+)\1$""")

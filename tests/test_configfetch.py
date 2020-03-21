@@ -193,6 +193,7 @@ class TestParseConfig:
         conf = fetch(data)
         assert conf.sec1.aa is False
 
+    # blank string returns ``None``
     def test_conf_bool_blank(self):
         data = f("""
         [sec1]
@@ -200,8 +201,7 @@ class TestParseConfig:
               
         """)
         conf = fetch(data)
-        with pytest.raises(ValueError):
-            assert conf.sec1.aa is False
+        assert conf.sec1.aa is None
 
     def test_conf_comma(self):
         data = f("""
