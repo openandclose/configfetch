@@ -17,7 +17,7 @@ _UNSET = object()
 
 BOOLEAN_STATES = {  # the same as ConfigParser.BOOLEAN_STATES
     '1': True, 'yes': True, 'true': True, 'on': True,
-    '0': False, 'no': False, 'false': False, 'off': False
+    '0': False, 'no': False, 'false': False, 'off': False,
 }
 
 _STRING_RE = re.compile(r"""(["'])(.+)\1$""")
@@ -657,13 +657,11 @@ class Double(object):
         try:
             val = self.sec.get(option)
         except NoOptionError:
-            parent_val = self.parent_sec.get(option)
-            return parent_val
+            return self.parent_sec.get(option)
 
         if val in (None, '', []):
             try:
-                parent_val = self.parent_sec.get(option)
-                return parent_val
+                return self.parent_sec.get(option)
             except NoOptionError:
                 pass
 
