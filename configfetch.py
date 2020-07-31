@@ -515,13 +515,11 @@ class ConfigFetch(object):
     # TODO: Invalidate attribute names this class uses.
     # cf. set(dir(configfetch.fetch(''))) - set(dir(object()))
     def __getattr__(self, section):
-        if section in self._cache:
-            return self._cache[section]
-
-        s = SectionProxy(
-            self, section, self._ctx, self._fmts, self._Func)
-        self._cache[section] = s
-        return s
+        if section not in self._cache:
+            s = SectionProxy(
+                self, section, self._ctx, self._fmts, self._Func)
+            self._cache[section] = s
+        return self._cache[section]
 
     def get(self, section):
         try:
