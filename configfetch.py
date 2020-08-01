@@ -449,7 +449,7 @@ class ConfigFetch(object):
         Metadata are kept intact, if any.
 
         If ``format`` is ``None`` (default),
-        only when the metadata dict (``_ctxs``) is blank,
+        only when the metadata dict (``_ctx``) is blank,
         read the file as 'fini'
         (supposed to be the first time read).
         Otherwise read the file as 'ini'.
