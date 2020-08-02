@@ -896,3 +896,65 @@ class TestBuildArgsCommandlineOnly:
         assert action.help == argparse.SUPPRESS
         assert action.default == argparse.SUPPRESS
         assert conf.sec1.aa == 'xxx'
+
+
+def test_print_data():
+    data = f("""
+    [DEFAULT]
+    aa = aaa
+    [sec1]
+    bb = bbb
+    cc = : help string
+         :: names: c
+         :: f: bool
+         ccc
+    dd =
+    """)
+
+    dict_string = f("""
+    {
+        'DEFAULT': {
+            'aa': {
+                'value': 'aaa',
+            },
+        },
+        'sec1': {
+            'bb': {
+                'value': 'bbb',
+            },
+            'cc': {
+                'argparse': {
+                    'help': 'help string',
+                    'names': ['c'],
+                },
+                'func': ['bool'],
+                'value': 'ccc',
+            },
+            'dd': {
+                'value': '',
+            },
+        },
+    }
+    """)
+            
+    ini_string = f("""
+    [DEFAULT]
+    aa= aaa
+
+    [sec1]
+    bb= bbb
+    cc= ccc
+    dd=
+
+    """)
+
+    conf = fetch(data, option_builder=configfetch.FiniOptionBuilder)
+    printer = configfetch.ConfigPrinter
+
+    ret = []
+    printer(conf, print=ret.append).print_dict()
+    assert '\n'.join(ret) == dict_string[:-1]
+
+    ret = []
+    printer(conf, print=ret.append).print_ini()
+    assert '\n'.join(ret) == ini_string[:-1]

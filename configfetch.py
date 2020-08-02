@@ -821,3 +821,121 @@ def minusadapter(parser, matcher=None, args=None):
 
     args = args if args else sys.argv[1:]
     return list(_iter_args(args, actions))
+
+
+class ConfigPrinter(object):
+    """Print dictionay or INI format strings from configuration.
+
+    :param conf: ConfigFetch object, with _config and _ctx attributes
+    :param sections: list of section names to print, all sections if None
+    :param width: indent unit width
+    :param print: any function with one string argument,
+        to customize printout behavior
+    """
+
+    def __init__(self, conf, sections=None, width=4, print=print):
+        self._conf = conf
+        self.sections = sections
+        self._dict = self.build_dict(conf)
+        self.width = width
+        self.print = print
+
+    def build_dict(self, conf):
+        """Build clean dictionay from conf object."""
+
+        def build_section(section, ctx, defaults=None):
+            d = {}
+            for option, value in section.items():
+                if value is None:
+                    continue
+                if defaults and option in defaults:
+                    if value == defaults[option]:
+                        continue
+                d[option] = build_option(option, value, ctx)
+            return d
+
+        def build_option(option, value, ctx):
+            d = {}
+            for key in ctx:
+                if key == option:
+                    for k, v in ctx[key].items():
+                        d[k] = v
+            if value is not None:
+                d['value'] = value
+            return d
+
+        config = conf._config
+        ctx = conf._ctx
+
+        default_section = config.default_section
+        defaults = config.defaults()
+        section_names = self.sections or config.sections()
+
+        d = {}
+        section = build_section(defaults, ctx)
+        if section:
+            d[default_section] = section
+
+        for sec in section_names:
+            section = config[sec]
+            if len(section) == 0:
+                continue
+            section = build_section(section, ctx, defaults)
+            if section:
+                d[sec] = section
+
+        return d
+
+    def print_dict(self):
+        """Print dictionary string."""
+        width = self.width
+        print = self.print
+
+        def iterate(d, level):
+
+            def p(string):
+                s = ' ' * level * width + string
+                print(s)
+
+            for k, v in d.items():
+                if getattr(v, 'items', None):
+                    p('%r: {' % k)
+                    iterate(v, level + 1)
+                    p('},')
+                else:
+                    p('%r: %r,' % (k, v))
+
+        print('{')
+        iterate(self._dict, level=1)
+        print('}')
+
+    def print_ini(self):
+        """Print INI format string."""
+        width = self.width
+        print = self.print
+
+        def p(string):
+            print(string.rstrip())
+
+        option_len = 0
+        for sec, section in self._dict.items():
+            for option, value in section.items():
+                if len(option) > option_len:
+                    option_len = len(option)
+
+        # Just avoiding importing math module
+        # https://stackoverflow.com/a/14822457
+        # plus 1 for '='
+        ceil = (option_len + 1 + width - 1) // width
+        option_len = ceil * width
+
+        for sec, section in self._dict.items():
+            p('[%s]' % sec)
+            for option, val in section.items():
+                value = val['value']
+                first, *rest = value.split('\n')
+                p('%*s%s' % (-option_len, option + '=', first))
+                if rest:
+                    for r in rest:
+                        p('%s%s' % (' ' * option_len, r))
+            print('')
