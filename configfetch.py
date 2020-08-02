@@ -201,9 +201,8 @@ class FiniOptionParser(object):
     ARGS_PREFIX = '::'
     ARGS_SHORTNAMES = {'f': 'func'}
 
-    def __init__(self, config, ctx):
+    def __init__(self, config):
         self._config = config
-        self._ctx = ctx
 
         # Note: require a space (' ') for nonblank values
         comp = re.compile
@@ -211,24 +210,25 @@ class FiniOptionParser(object):
         self._args_re = comp(r'^\s*(%s)(?: (.+))*\s*$' % self.ARGS_PREFIX)
 
     def parse(self):
+        ctx = {}
         for secname, section in self._config.items():
             for option in section:
-                self._parse_option(section, option)
-        return self._ctx
+                self._parse_option(section, option, ctx)
+        return ctx
 
-    def _parse_option(self, section, option):
+    def _parse_option(self, section, option, ctx):
         value = section[option]
         args, value = self._parse_args(value)
 
         section[option] = value
         if args['argparse']:
-            if not self._ctx.get(option):
-                self._ctx[option] = {}
-            self._ctx[option]['argparse'] = args['argparse']
+            if not ctx.get(option):
+                ctx[option] = {}
+            ctx[option]['argparse'] = args['argparse']
         if args['func']:
-            if not self._ctx.get(option):
-                self._ctx[option] = {}
-            self._ctx[option]['func'] = args['func']
+            if not ctx.get(option):
+                ctx[option] = {}
+            ctx[option]['func'] = args['func']
 
     def _parse_args(self, value):
         help_ = []
@@ -488,7 +488,7 @@ class ConfigFetch(object):
             if len(self._ctx) == 0:
                 format = 'fini'
         if format == 'fini':
-            optionparser = self._optionparser(self._config, self._ctx)
+            optionparser = self._optionparser(self._config)
             self._ctx = optionparser.parse()
 
     def set_arguments(self, argument_parser, sections=None):
