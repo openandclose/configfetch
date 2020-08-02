@@ -246,6 +246,8 @@ class OptionParser(object):
                 if state not in ('root', 'help'):
                     raise OptionParseError(error_fmt % line)
                 state = 'help'
+                # create blank 'help' key beforehand, to preserve key order
+                args['argparse']['help'] = ''
                 help_.append(m.group(2) if m.group(2) else '')
                 continue
 
