@@ -343,6 +343,14 @@ class FiniOptionParser(object):
             if val == 'argparse.SUPPRESS':
                 args['argparse'][key] = argparse.SUPPRESS
 
+
+class ArgumentBuilder(object):
+    """Fill ``argparse.ArgumentParser`` object with arguments."""
+
+    def __init__(self, conf):
+        self._config = conf._config
+        self._ctx = conf._ctx
+
     def build(self, argument_parser, sections=None):
         if sections is None:
             sections = self._config.sections()
@@ -501,8 +509,7 @@ class ConfigFetch(object):
         4. Parse commandline (``ArgumentParser.parse_args``).
         5. ``.set_args`` below with the new ``args``.
         """
-        optionparser = self._optionparser(self._config, self._ctx)
-        optionparser.build(argument_parser, sections)
+        ArgumentBuilder(self).build(argument_parser, sections)
         return argument_parser
 
     def set_args(self, namespace):
