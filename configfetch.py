@@ -194,8 +194,8 @@ class Func(object):
         return value
 
 
-class OptionParser(object):
-    """Parse option values for ``ConfigFetch``."""
+class FiniOptionParser(object):
+    """Parse ``FINI`` option values and create context dict."""
 
     HELP_PREFIX = ':'
     ARGS_PREFIX = '::'
@@ -414,14 +414,14 @@ class ConfigFetch(object):
     :param envs: dictionary with option name and Environment Variable name
         as key and value
     :param Func: ``Func`` or subclasses, keep actual functions
-    :param optionparser: ``OptionParser`` or a subclass,
+    :param optionparser: ``FiniOptionParser`` or a subclass,
         parse option value string and build actual value and metadata
     :param parser: ``ConfigParser`` or a subclass,
         keep actual config data
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None,
-            Func=Func, optionparser=OptionParser,
+            Func=Func, optionparser=FiniOptionParser,
             parser=configparser.ConfigParser, **kwargs):
         self._fmts = fmts or {}
         self._args = args or argparse.Namespace()
