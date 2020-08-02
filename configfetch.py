@@ -201,8 +201,9 @@ class FiniOptionParser(object):
     ARGS_PREFIX = '::'
     ARGS_SHORTNAMES = {'f': 'func'}
 
-    def __init__(self, config):
-        self._config = config
+    def __init__(self, conf):
+        self._config = conf._config
+        self._conf = conf
 
         # Note: require a space (' ') for nonblank values
         comp = re.compile
@@ -488,7 +489,7 @@ class ConfigFetch(object):
             if len(self._ctx) == 0:
                 format = 'fini'
         if format == 'fini':
-            optionparser = self._optionparser(self._config)
+            optionparser = self._optionparser(self)
             self._ctx = optionparser.parse()
 
     def set_arguments(self, argument_parser, sections=None):
