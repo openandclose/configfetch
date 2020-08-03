@@ -529,7 +529,7 @@ from ``INI`` string values none the less,
 only simple cases are feasible
 (E.g. In ``':: const: 1'``, is ``'1'`` ``int`` or ``str`` ?)
 
-See source code (``FiniOptionParser._convert_arg``) for details.
+See source code (``FiniOptionBuilder._convert_arg``) for details.
 
 3:
 

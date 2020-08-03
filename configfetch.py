@@ -44,7 +44,7 @@ class NoOptionError(Error, configparser.NoOptionError):
         super().__init__(option, section)
 
 
-class OptionParseError(Error):
+class OptionBuildError(Error):
     """Raised when config has a invalid line."""
 
 
@@ -194,7 +194,7 @@ class Func(object):
         return value
 
 
-class FiniOptionParser(object):
+class FiniOptionBuilder(object):
     """Parse ``FINI`` option values and create context dict."""
 
     HELP_PREFIX = ':'
@@ -256,7 +256,7 @@ class FiniOptionParser(object):
             m = self._help_re.match(line)
             if m:
                 if state not in ('root', 'help'):
-                    raise OptionParseError(error_fmt % line)
+                    raise OptionBuildError(error_fmt % line)
                 state = 'help'
                 # create blank 'help' key beforehand, to preserve key order
                 args['argparse']['help'] = ''
@@ -266,18 +266,18 @@ class FiniOptionParser(object):
             m = self._args_re.match(line)
             if m:
                 if not m.group(2):
-                    raise OptionParseError(error_fmt % line)
+                    raise OptionBuildError(error_fmt % line)
 
                 key, val = m.group(2).split(':', maxsplit=1)
                 key, val = self._convert_arg(key, val)
                 if key != 'func':
                     if state not in ('help', 'argparse'):
-                        raise OptionParseError(error_fmt % line)
+                        raise OptionBuildError(error_fmt % line)
                     args['argparse'][key] = val
                     state = 'argparse'
                 else:
                     if state not in ('root', 'help', 'argparse'):
-                        raise OptionParseError(error_fmt % line)
+                        raise OptionBuildError(error_fmt % line)
                     args['func'] = val
                     state = 'func'
                 continue
@@ -434,20 +434,20 @@ class ConfigFetch(object):
     :param envs: dictionary with option name and Environment Variable name
         as key and value
     :param Func: ``Func`` or subclasses, keep actual functions
-    :param optionparser: ``FiniOptionParser`` or a subclass,
+    :param option_builder: ``FiniOptionBuilder`` or a subclass,
         parse option value string and build actual value and metadata
     :param parser: ``ConfigParser`` or a subclass,
         keep actual config data
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None,
-            Func=Func, optionparser=FiniOptionParser,
+            Func=Func, option_builder=FiniOptionBuilder,
             parser=configparser.ConfigParser, **kwargs):
         self._fmts = fmts or {}
         self._args = args or argparse.Namespace()
         self._envs = envs or {}
         self._Func = Func
-        self._optionparser = optionparser
+        self._option_builder = option_builder
         self._parser = parser
         self._ctx = {}  # option -> metadata dict
         self._cache = {}  # SectionProxy object cache
@@ -457,8 +457,8 @@ class ConfigFetch(object):
         self._config.optionxform = self._optionxform
 
     def fetch(self, input_):
-        optionparser = self._optionparser(self)
-        self._ctx = optionparser.parse(input_)
+        option_builder = self._option_builder(self)
+        self._ctx = option_builder.parse(input_)
 
         # shortcut
         self.read = self._config.read
@@ -682,7 +682,7 @@ class Double(object):
 
 def fetch(input_, *, encoding=None,
         fmts=None, args=None, envs=None, Func=Func,
-        parser=configparser.ConfigParser, optionparser=FiniOptionParser,
+        parser=configparser.ConfigParser, option_builder=FiniOptionBuilder,
         **kwargs):
     """Fetch ``ConfigFetch`` object.
 
@@ -698,7 +698,7 @@ def fetch(input_, *, encoding=None,
     Files are read with ``format=None``.
     """
     conf = ConfigFetch(fmts=fmts, args=args, envs=envs, Func=Func,
-        parser=parser, optionparser=optionparser)
+        parser=parser, option_builder=option_builder)
 
     if issubclass(option_builder, FiniOptionBuilder):
         if isinstance(input_, str) and os.path.isfile(input_):
