@@ -471,7 +471,7 @@ class ConfigFetch(object):
             return option
         return _xform
 
-    def set_arguments(self, argument_parser, sections=None):
+    def build_arguments(self, argument_parser, sections=None):
         """Run ``argument_parser.add_argument`` according to config metadata.
 
         :param argument_parser: ``argparse.ArgumentParser`` or a subclass,
@@ -485,14 +485,14 @@ class ConfigFetch(object):
 
         1. Instantiate ``ConfigFetch`` with blank ``arg``.
         2. Create ``ArgumentParser``, edit as necessary.
-        3. ``.set_arguments`` (populate ``ArgumentParser`` with metadata).
+        3. ``.build_arguments`` (populate ``ArgumentParser`` with metadata).
         4. Parse commandline (``ArgumentParser.parse_args``).
-        5. ``.set_args`` below with the new ``args``.
+        5. ``.set_arguments`` below with the new ``args``.
         """
         ArgumentBuilder(self).build(argument_parser, sections)
         return argument_parser
 
-    def set_args(self, namespace):
+    def set_arguments(self, namespace):
         """Set ``_args`` attribute.
 
         :param namespace: ``argparse.Namespace`` object

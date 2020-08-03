@@ -584,7 +584,7 @@ Optionally you can only add ``choices``.
 Building Arguments
 ------------------
 
-To actually build arguments, see `set_arguments <#configfetch.ConfigFetch.set_arguments>`__.
+To actually build arguments, see `build_arguments <#configfetch.ConfigFetch.set_arguments>`__.
 
 
 API

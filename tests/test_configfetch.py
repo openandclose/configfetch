@@ -16,7 +16,7 @@ def f(string):
 
 def _get_action(conf, option_strings):
     parser = argparse.ArgumentParser(prog='test')
-    conf.set_arguments(parser)
+    conf.build_arguments(parser)
     # parser.print_help()
     for action in parser._get_optional_actions():
         if option_strings in action.option_strings:
@@ -806,7 +806,7 @@ class TestBuildArgs:
         """)
         conf = fetch(data)
         parser = argparse.ArgumentParser(prog='test')
-        conf.set_arguments(parser)
+        conf.build_arguments(parser)
         namespace = parser.parse_args(['--aa'])
         assert namespace.__dict__['aa'] == 'yes'
         namespace = parser.parse_args(['--no-aa'])
@@ -837,7 +837,7 @@ class TestBuildArgs:
         """)
         conf = fetch(data)
         parser = argparse.ArgumentParser(prog='test')
-        conf.set_arguments(parser)
+        conf.build_arguments(parser)
         namespace = parser.parse_args(['--overwrite'])
         assert namespace.__dict__['overwrite'] == 'yes'
         namespace = parser.parse_args(['--no-overwrite'])

@@ -9,6 +9,8 @@ Changelog
 
 * Cut complex .read_file and .read_string interfaces, Add .fetch.
 
+* Rename set_arguments -> build_arguments, set_args -> set_arguments
+
 **Add:**
 
 * Add print_dict and print_ini methods.
