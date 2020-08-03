@@ -5,6 +5,10 @@ Changelog
 **Unreleased:**
 ---------------
 
+**Change:**
+
+* Cut complex .read_file and .read_string interfaces, Add .fetch.
+
 **Add:**
 
 * Add print_dict and print_ini methods.

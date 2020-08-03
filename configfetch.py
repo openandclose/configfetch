@@ -210,7 +210,18 @@ class FiniOptionParser(object):
         self._help_re = comp(r'^\s*(%s)(?: (.+))*$' % self.HELP_PREFIX)
         self._args_re = comp(r'^\s*(%s)(?: (.+))*\s*$' % self.ARGS_PREFIX)
 
-    def parse(self):
+    def parse(self, input_):
+        """Parse input and build conifg data and metadata."""
+        if hasattr(input_, 'read'):
+            self._config.read_file(input_)
+        elif isinstance(input_, str):
+            self._config.read_string(input_)
+        else:
+            raise ValueError('input data must be file object or string.')
+
+        return self._parse()
+
+    def _parse(self):
         ctx = {}
         for secname, section in self._config.items():
             for option in section:
@@ -445,52 +456,20 @@ class ConfigFetch(object):
         self._config = parser(**kwargs)
         self._config.optionxform = self._optionxform
 
-    def read_file(self, f, format=None):
-        """Read config from an opened file object.
+    def fetch(self, input_):
+        optionparser = self._optionparser(self)
+        self._ctx = optionparser.parse(input_)
 
-        :param f: a file object
-        :param format: 'fini', 'ini' or ``None``
-
-        If ``format`` is 'fini',
-        read config values and metadata.
-        Previous metadata definitions are overwritten, if any.
-
-        If ``format`` is 'ini' (or actually any other string than 'fini'),
-        read only config values, just using the ``ConfigParser`` or a subclass.
-        Metadata are kept intact, if any.
-
-        If ``format`` is ``None`` (default),
-        only when the metadata dict (``_ctx``) is blank,
-        read the file as 'fini'
-        (supposed to be the first time read).
-        Otherwise read the file as 'ini'.
-        """
-        self._config.read_file(f)
-        self._check_and_parse_config(format)
-
-    def read_string(self, string, format=None):
-        """Read config from a string.
-
-        :param string: a string
-        :param format: 'fini', 'ini' or ``None``
-
-        The meaning of ``format`` is the same as ``.read_file``.
-        """
-        self._config.read_string(string)
-        self._check_and_parse_config(format)
+        # shortcut
+        self.read = self._config.read
+        self.read_file = self._config.read_file
+        self.read_string = self._config.read_string
+        self.read_dict = self._config.read_dict
 
     def _get_optionxform(self):
         def _xform(option):
             return option
         return _xform
-
-    def _check_and_parse_config(self, format):
-        if format is None:
-            if len(self._ctx) == 0:
-                format = 'fini'
-        if format == 'fini':
-            optionparser = self._optionparser(self)
-            self._ctx = optionparser.parse()
 
     def set_arguments(self, argument_parser, sections=None):
         """Run ``argument_parser.add_argument`` according to config metadata.
@@ -701,9 +680,10 @@ class Double(object):
         return self.sec.__iter__()
 
 
-def fetch(file_or_string, *, encoding=None,
+def fetch(input_, *, encoding=None,
         fmts=None, args=None, envs=None, Func=Func,
-        parser=configparser.ConfigParser, **kwargs):
+        parser=configparser.ConfigParser, optionparser=FiniOptionParser,
+        **kwargs):
     """Fetch ``ConfigFetch`` object.
 
     It is a convenience function for the basic use of the library.
@@ -711,20 +691,22 @@ def fetch(file_or_string, *, encoding=None,
 
     the specific arguments are:
 
-    :param file_or_string: a filename to open
+    :param input_: a filename to open
         if the name is in system path, or a string
     :param encoding: encoding to use when openning the name
 
     Files are read with ``format=None``.
     """
     conf = ConfigFetch(fmts=fmts, args=args, envs=envs, Func=Func,
-        parser=parser)
+        parser=parser, optionparser=optionparser)
 
-    if os.path.isfile(file_or_string):
-        with open(file_or_string, encoding=encoding) as f:
-            conf.read_file(f)
-    else:
-        conf.read_string(file_or_string)
+    if issubclass(option_builder, FiniOptionBuilder):
+        if isinstance(input_, str) and os.path.isfile(input_):
+            with open(input_, encoding=encoding) as f:
+                conf.fetch(f)
+                return conf
+
+    conf.fetch(input_)
     return conf
 
 
