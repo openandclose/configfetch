@@ -958,3 +958,14 @@ def test_print_data():
     ret = []
     printer(conf, print=ret.append).print_ini()
     assert '\n'.join(ret) == ini_string[:-1]
+
+    dict_ = eval(dict_string)
+    conf = fetch(dict_, option_builder=configfetch.DictOptionBuilder)
+
+    ret = []
+    printer(conf, print=ret.append).print_dict()
+    assert '\n'.join(ret) == dict_string[:-1]
+
+    ret = []
+    printer(conf, print=ret.append).print_ini()
+    assert '\n'.join(ret) == ini_string[:-1]

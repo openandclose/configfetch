@@ -194,6 +194,41 @@ class Func(object):
         return value
 
 
+class DictOptionBuilder(object):
+    """Parse and edit option values from a dictionay."""
+
+    def __init__(self, conf):
+        self._config = conf._config
+        self._conf = conf
+
+    def parse(self, input_):
+        if not isinstance(input_, dict):
+            raise ValueError('input data must be dict.')
+
+        self._input = input_
+        return self._parse()
+
+    def _parse(self):
+        ctx = {}
+        for sec, section in self._input.items():
+            if sec not in self._config:
+                self._config.add_section(sec)
+            for opt, option in section.items():
+                self._parse_option(sec, section, opt, option, ctx)
+        return ctx
+
+    def _parse_option(self, sec, section, opt, option, ctx):
+        self._config[sec][opt] = option['value']
+        if option.get('argparse'):
+            if not ctx.get(opt):
+                ctx[opt] = {}
+            ctx[opt]['argparse'] = option['argparse']
+        if option.get('func'):
+            if not ctx.get(opt):
+                ctx[opt] = {}
+            ctx[opt]['func'] = option['func']
+
+
 class FiniOptionBuilder(object):
     """Parse ``FINI`` option values and create context dict."""
 
@@ -219,6 +254,7 @@ class FiniOptionBuilder(object):
         else:
             raise ValueError('input data must be file object or string.')
 
+        self._input = input_
         return self._parse()
 
     def _parse(self):
