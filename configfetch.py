@@ -470,14 +470,14 @@ class ConfigFetch(object):
     :param envs: dictionary with option name and Environment Variable name
         as key and value
     :param Func: ``Func`` or subclasses, keep actual functions
-    :param option_builder: ``FiniOptionBuilder`` or a subclass,
+    :param option_builder: ``DictOptionBuilder`` or ``FiniOptionBuilder``,
         parse option value string and build actual value and metadata
     :param parser: ``ConfigParser`` or a subclass,
         keep actual config data
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None,
-            Func=Func, option_builder=FiniOptionBuilder,
+            Func=Func, option_builder=DictOptionBuilder,
             parser=configparser.ConfigParser, **kwargs):
         self._fmts = fmts or {}
         self._args = args or argparse.Namespace()
@@ -718,7 +718,7 @@ class Double(object):
 
 def fetch(input_, *, encoding=None,
         fmts=None, args=None, envs=None, Func=Func,
-        parser=configparser.ConfigParser, option_builder=FiniOptionBuilder,
+        parser=configparser.ConfigParser, option_builder=DictOptionBuilder,
         **kwargs):
     """Fetch ``ConfigFetch`` object.
 

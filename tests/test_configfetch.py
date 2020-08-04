@@ -1,13 +1,17 @@
 
 import argparse
 import configparser
+import functools
 import textwrap
 
 import pytest
 
 import configfetch
 
-fetch = configfetch.fetch
+fetch_ = configfetch.fetch
+
+fetch = functools.partial(
+    configfetch.fetch, option_builder=configfetch.FiniOptionBuilder)
 
 
 def f(string):

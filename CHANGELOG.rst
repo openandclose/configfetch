@@ -11,6 +11,8 @@ Changelog
 
 * Rename set_arguments -> build_arguments, set_args -> set_arguments
 
+* Change default option_builder to DictOptionBuilder
+
 **Add:**
 
 * Add print_dict and print_ini methods.
