@@ -24,8 +24,7 @@ def _get_action(conf, option_strings):
     # parser.print_help()
     for action in parser._get_optional_actions():
         if option_strings in action.option_strings:
-            break
-    return action
+            return action
     raise ValueError('No action with option_strings: %r' % option_strings)
 
 
