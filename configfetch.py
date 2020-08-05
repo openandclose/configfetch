@@ -494,7 +494,7 @@ class ConfigFetch(object):
 
     def fetch(self, input_):
         option_builder = self._option_builder(self)
-        self._ctx = option_builder.parse(input_)
+        self._ctx.update(option_builder.parse(input_))
 
         # shortcut
         self.read = self._config.read
