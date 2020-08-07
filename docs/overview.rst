@@ -2,19 +2,19 @@
 Overview
 ========
 
-The library provides a custom ``INI`` format,
-which registers optional conversion functions for each option value.
+This library helps to build and access configuration data.
 
-When getting value, they are applied.
+It reads specially formatted configuration data,
+creates ``configparser.ConfigParser`` object,
+and keeps corresponding metadata.
 
-Commandline arguments and Environment Variables precedes config file values,
-in that order.
+The metadata are used for automatic config value conversion,
+and ``argparse.ArgumentParser`` building.
 
-All data accesses are done by ``dot access`` or ``.get()`` method.
+All value accesses are done by ``dot access`` or ``.get()`` method.
 
-Optionally, the custom format can register directives
-to build commandline arguments
-(arguments for ``argparse.ArgumentParser.add_argument``).
+Commandline arguments and Environment Variables
+precedes config option values, in that order.
 
 
 Installation
@@ -30,49 +30,100 @@ Only **Python 3.5 and above** are supported. ::
 Usage
 -----
 
-.. code:: none
+.. code:: python
+
+    >>> data = {
+        'section1': {
+            'log': {
+                'func': ['bool'],
+                'value': 'no',
+            },
+            'users': {
+                'func': ['comma'],
+                'value': 'Alice, Bob, Charlie',
+            },
+            'output': {
+                'argparse': {
+                    'help': 'output format when saving data to a file',
+                    'names': 'o',
+                    'choices': 'html, csv, text',
+                    'default': 'html',
+                },
+                'value': '',
+            },
+        },
+    }
+    >>> import configfetch
+    >>> conf = configfetch.fetch(data)
+    >>> conf.section1.log
+    False
+    >>> conf.section1.users
+    ['Alice', 'Bob', 'Charlie']
+    >>> conf.section1.output
+    ''
+
+The library needs special dictionaries,
+which must have sub-sub-dictionaries
+as ``configparser``'s option value counterparts.
+
+the keys are ``'argparse'``, ``'func'`` and ``'value'``.
+``'value'`` key is required, others are optional.
+
+``'value'`` values are always string,
+since they become ``configparser``'s option values.
+(``INI`` format values are always string).
+
+``'func'`` values are always list.
+Each members are, again, string,
+some built-in function names or ones you created and registered.
+
+``'argparse'`` values are dictionaries.
+Each key-values can be passed to ``argparse.ArgumentParser.add_argument()``.
+But it is not done automatically.
+So they are doing nothing for now.
+
+.. code:: ini
 
     ## myapp.ini
-    [main]
+    [section1]
     log=        :: f: bool
                 no
 
     users=      :: f: comma
                 Alice, Bob, Charlie
 
-    output=     : output format                 <-- help
+    output=     : output format
                 : when saving data
                 : to a file.
-                :: names: o                     <-- other arguments
-                :: choices: ht, xht, x              for argparse
-                :: default: x
-                :: f: add_m, add_l              <-- functions
-                ht                              <-- config value
+                :: names: o
+                :: choices: html, csv, text
+                :: default: html
 
-    ## terminal
+.. code:: python
+
     >>> import configfetch
-    >>> conf = configfetch.fetch('myapp.ini')
-    >>> conf.main.log
+    >>> builder = configfetch.FiniOptionBuilder
+    >>> conf = configfetch.fetch('myapp.ini', option_builder=builder)
+    >>> conf.section1.log
     False
-    >>> conf.main.users
+    >>> conf.section1.users
     ['Alice', 'Bob', 'Charlie']
-    >>> conf.main.output
-    'html'
+    >>> conf.section1.output
+    ''
 
-The file has optional ``:: f: something`` notations
-before each option value,
-which registers ``something`` function for this particular option.
+... Or you can do the same thing, from a kind of ``INI`` format file or string.
 
-Other strange (I admit) ``': '`` and ``':: '`` notations are
-for building ``argparse`` arguments.
-If you don't need to build the arguments, you don't need them.
+``': <something>'``:
+    is the same as ``argparse['help']`` key value.
+    For maximum readability it is specially treated.
 
----
+``':: :f <something>'``:
+    is the same as ``'func'`` key value.
 
-From now on, I call this customized format, as ``Fetch-INI`` or ``FINI`` format.
+``':: <key>: <value>'``:
+    is the same as other ``'argparse'`` key-value pairs.
 
-I call this new configuration object as ``conf``,
-to differentiate from the original ``INI`` configuration object, ``config``.
+Let's call this customized format, as ``FINI`` (Fetch-INI) format.
 
 
 API Overview
@@ -259,30 +310,29 @@ each function expects.
 Builtin Functions
 -----------------
 
-All builtin functions except ``bar``, expect ``value`` as a string,
-so they should come in first.
+All builtin functions except ``bar``, expect a string as ``value``.
 
-``bar`` expects an list type ``value``,
-so it should come the second or after.
-(usually immediately after ``comma`` or ``line``.)
+``bar`` expects a list of strings as ``value``.
 
 .. method:: bool(value)
 
-    return ``True`` or ``False``,
-    according to the same rule as ``configparser``'s.
+    return ``True``, ``False`` or ``None``.
 
     | ``'1'``,  ``'yes'``, ``'true'``, ``'on'`` are ``True``.
     | ``'0'``, ``'no'``, ``'false'``, ``'off'`` are ``False``.
     | Case insensitive.
-    | Other values raise an error.
+
+    As a special case blank string (``''``) returns ``None``.
+
+    Other values raise an error.
 
 .. method:: comma(value)
 
-    Return a list using comma as separators.
+    Return a list using commas as separators.
     No comma value returns one element list.
     Blank value returns a blank list (``[]``).
 
-    Heading and tailing whitespaces are stripped
+    Leading and tailing whitespaces are stripped
     from each element.
 
     If the previous character is ``'\'``,
@@ -302,11 +352,11 @@ so it should come the second or after.
 
 .. method:: line(value)
 
-    Return a list using line break as separators.
+    Return a list using line breaks as separators.
     No line break value returns one element list.
     Blank value returns a blank list (``[]``).
 
-    Heading and tailing whitespaces and *commas* are stripped
+    Leading and tailing whitespaces and *commas* are stripped
     from each element.
 
     The escaping behavior with ``'\'`` is the same as ``comma``.
@@ -327,7 +377,7 @@ so it should come the second or after.
 
     .. code:: python
 
-        >>> conf.main.scheme
+        >>> conf.section1.scheme
         'https?|ftp|mailto'
 
 .. method:: cmd(value)
@@ -335,7 +385,7 @@ so it should come the second or after.
     Return a list of strings
     ready to put in `subprocess <https://docs.python.org/3/library/subprocess.html>`__.
 
-    Users have to quote whitespaces as they do in a terminal.
+    Users have to write strings as in a terminal (quotes and escapes).
 
     Note ``'#'`` and after are comments, they are discarded.
 
@@ -344,19 +394,19 @@ so it should come the second or after.
     .. code::
 
         command=    :: f: cmd
-                    ls -l 'Live at the Apollo' # 1968
+                    echo -e '"I have a dream.", he said.\n'
 
     .. code:: python
 
-        >>> conf.main.command
-        ['ls', '-l', 'Live at the Apollo']
+        >>> conf.section1.command
+        ['echo', '-e', '"I have a dream.", he said.\n']
 
 .. method:: cmds(value)
 
     Return a list of list of strings.
 
     List version of ``cmd``.
-    The input value is a list of strings, with each item made to a list by ``cmd``.
+    The input value is a list of strings, with each item made into a list by ``cmd``.
 
 .. method:: fmt(value)
 
@@ -376,13 +426,13 @@ so it should come the second or after.
 
     .. code:: python
 
-        >>> conf.main.css
+        >>> conf.section1.css
         '/home/john/data/my.css'
 
 .. method:: plus(value)
 
     receive ``value`` as argument, but actually it doesn't use this,
-    and use ``values`` (a ``[arg, env, opt]`` list before selection) instead.
+    and use ``values`` instead (a ``[arg, env, opt]`` list before selection).
 
     Let's call an item starting with ``'+'`` as ``plus item``,
     one starting with ``'-'`` as ``minus item``,
@@ -426,7 +476,7 @@ Example:
 .. code::
 
     ## myapp.ini
-    [main]
+    [section1]
     search=     :: f: glob
                 python
 
@@ -452,7 +502,7 @@ Example:
     # terminal
     >>> import myapp
     >>> conf = myapp.conf
-    >>> conf.main.search
+    >>> conf.section1.search
     '*python*'
 
 
@@ -487,8 +537,9 @@ args:
     special ``<name>`` ``'names'`` is used for
     `name or flags <https://docs.python.org/3/library/argparse.html#name-or-flags>`__,
     with the option name added to the last.
-    (``'output'`` option in the `Usage <#usage>`__ of the document top
-    becomes ``'-o', '--output'``).
+
+    (E.g. ``'output'`` option in the `Usage example <#usage>`__ of the document top
+    has ``':: names: o'``, so argument names becomes ``['-o', '--output']``).
 
 func:
     Following string from ``':: f: '`` is comma separated function names
@@ -508,26 +559,28 @@ there are three kinds of option types.
 2. Commandline-only options
 3. Common options (to commandline and config file)
 
+For ``FINI`` format (``FiniOptionBuilder``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 1:
 
-If you don't provide ``help`` to an option,
+If you don't provide ``'help'`` option line to an option,
 it is not exposed for building process.
 So that makes 1. config-only options.
 
 2:
 
-If you provide ``help``, but you don't provide or ignore the config option
+If you can ignore the config option
 (separating it in a specially chosen section, say,
 ``'[_command_only]'``),
-which make 2. commandline-only options.
+it veritably makes 2. commandline-only options.
 
-For this, since it is unrelated to the ``INI`` config options,
+For this, since it is unrelated to the ``INI`` format limitations,
 you can use any ``add_argument`` arguments.
 
-But data types have to be guessed
-from ``INI`` string values none the less,
+But data types have to be guessed from ``INI`` string values none the less,
 only simple cases are feasible
-(E.g. In ``':: const: 1'``, is ``'1'`` ``int`` or ``str`` ?)
+(E.g. In ``':: const: 1'``, is ``'1'`` ``int`` or ``str`` ?).
 
 See source code (``FiniOptionBuilder._convert_arg``) for details.
 
@@ -538,53 +591,114 @@ For all common options:
     * As already said, ``help`` is required.
     * You can always add ``names``.
 
-For Flags:
+They are divided in two: boolean options and non-boolean options.
 
-For common options which have ``bool`` in ``func``,
-arguments are automatically supplied.
+    * For non-boolean options:
 
-.. code:: ini
+      They are all treated as ``action='store', nargs=None``,
+      which is ``argparse`` default.
+      Optionally you can only add ``choices``.
 
-    log=    : log events
-            :: f: bool
-            yes
+    * For boolean options:
 
-becomes:
+      If it has ``bool`` in ``func``, it is a boolean option,
+      and the option is interpreted as flag (with no ``option_argument``).
+      
+      ``action`` is always ``store_const``, ``const`` is 'yes'
+      (which will be converted to ``True`` when getting value).
+      
+      .. code:: ini
+      
+          log=    : log events
+                  :: f: bool
+                  yes
+      
+      becomes:
+      
+      .. code:: python
+      
+          [...].add_argument('--log', action='store_const', const='yes')
+      
+      If there is ``dest`` argument, it is interpreted as opposite flag.
+      ``const`` becomes 'no' (converted to ``False``).
+      
+      .. code:: ini
+      
+          no_log=     : do not log events
+                      :: dest: log
+                      :: f: bool
+                      no
+      
+      becomes:
+      
+      .. code:: python
+      
+          [...].add_argument('--no-log', action='store_const', const='no', dest='log')
 
-.. code:: python
+For dictionary (``DictOptionBuilder``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    [...].add_argument('--log', action='store_const', const='yes')
+1:
 
-``action`` is always ``store_const``, ``const`` is 'yes'
-(which will be converted to ``True`` when getting value).
+If you don't provide ``'argparse'`` key to an option,
+it is not exposed for building process.
+So that makes 1. config-only options.
 
-Only to make the opposite flags, you can add ``dest`` argument.
-If there is ``dest``, ``const`` is 'no' (converted to ``False``).
+---
 
-.. code:: ini
+Otherwise, ``DictOptionBuilder`` enforces no rules,
+and provide no smart argument adjustments (exactly as you provided).
 
-    no_log=     : do not log events
-                :: dest: log
-                :: f: bool
-                no
-
-becomes:
-
-.. code:: python
-
-    [...].add_argument('--no-log', action='store_const', const='no', dest='log')
-
-For Non-Flags:
-
-Other common options are all treated as ``action='store', nargs=None``,
-which is ``argparse`` default.
-Optionally you can only add ``choices``.
+Although, using in the same restrictions as ``FINI`` format is
+generally presupposed and recommended.
 
 
 Building Arguments
 ------------------
 
-To actually build arguments, see `build_arguments <#configfetch.ConfigFetch.set_arguments>`__.
+1. Instantiate ``ConfigFetch`` with blank ``arg``.
+2. Create ``ArgumentParser``, edit as necessary.
+3. ``ConfigFetch.build_arguments`` with the ``ArgumentParser``.
+   (populate it with arguments).
+4. Parse commandline (``ArgumentParser.parse_args``).
+5. ``ConfigFetch.set_arguments`` with the new ``args``
+   (re-initialization).
+
+.. code::
+
+    # myapp.ini
+    [section1]
+    log=        : log the program
+                :: f: bool
+                no
+
+    users=      : assign users
+                :: f: comma
+                Alice, Bob, Charlie
+
+    output=     : output format
+                : when saving data
+                : to a file.
+                :: names: o
+                :: choices: html, csv, text
+                :: default: html
+
+.. code:: python
+
+    >>> import configfetch
+    >>> builder=configfetch.FiniOptionBuilder
+    >>> conf = configfetch.fetch('myapp.ini', option_builder=builder)
+    >>> import argparse
+    >>> parser = argparse.ArgumentParser()
+    >>> parser = conf.build_arguments(argument_parser=parser)
+    >>> args = parser.parse_args(['--log', '--users', 'Dan, Eve'])
+    >>> conf.set_arguments(args)
+    >>> conf.section1.log
+    True
+    >>> conf.section1.users
+    ['Dan', 'Eve']
+    >>> conf.section1.output
+    'html'
 
 
 API
@@ -657,3 +771,8 @@ Example:
     $ myapp.py --file -myfile.txt
     Namespace(file='-myfile.txt')
 
+ConfigPrinter
+^^^^^^^^^^^^^
+
+.. autoclass:: configfetch.ConfigPrinter
+    :members:

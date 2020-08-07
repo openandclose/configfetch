@@ -45,7 +45,7 @@ class NoOptionError(Error, configparser.NoOptionError):
 
 
 class OptionBuildError(Error):
-    """Raised when config has a invalid line."""
+    """Raised when config file has a invalid line."""
 
 
 def register(meth):
@@ -447,33 +447,37 @@ class ConfigFetch(object):
     It keeps a ``ConfigParser`` object (``_config``)
     and a correspondent option-name-to-metadata map (``_ctx``).
 
-    The metadata includes function list specific to the option name (global).
-    Option access returns a functions-applied-value.
-
     It also has ``argparse.Namespace`` object (``args``),
     and Environment variable dictionay (``envs``).
 
-    They are also global, having no concept of sections.
-    If the option name counterpart is defined,
+    If the option name counterpart is defined in ``args`` or ``envs``,
     their value precedes the config value.
 
-    Functions are similarly applied.
+    So most config option names must be global,
+    since ``args`` and ``envs`` do not have ``section`` namespace.
+
+    E.g. if a config has 'foo' section and 'bar' option in it,
+    ``args``, and ``envs`` just check the name 'bar',
+    ignoring section hierarchy.
+
+    The metadata includes function list specific to the option name.
+    Option access gets value from ``arg``, ``envs`` or config,
+    and returns a functions-applied-value.
 
     The class ``__init__`` should accept
     all ``ConfigParser.__init__`` keyword arguments.
 
-    The class specific argumants are:
+    Additional argumants are:
 
     :param fmts: dictionay ``Func._fmt`` uses
-    :param args: ``argparse.Namespace`` object,
-        already commandline arguments parsed
+    :param args: ``argparse.Namespace`` object
     :param envs: dictionary with option name and Environment Variable name
         as key and value
-    :param Func: ``Func`` or subclasses, keep actual functions
+    :param Func: ``Func`` or subclasses, worker to keep and look-up functions
     :param option_builder: ``DictOptionBuilder`` or ``FiniOptionBuilder``,
-        parse option value string and build actual value and metadata
+        worker to build value and metadata from data input
     :param parser: ``ConfigParser`` or a subclass,
-        keep actual config data
+        keep actual config values
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None,
@@ -493,6 +497,12 @@ class ConfigFetch(object):
         self._config.optionxform = self._optionxform
 
     def fetch(self, input_):
+        """Read input and build config data and metadata.
+
+        Note type of input entirely depends on option_builder.
+        ``DictOptionBuilder`` accepts only python dictionary object.
+        ``FiniOptionBuilder`` accepts only opened file object or string.
+        """
         option_builder = self._option_builder(self)
         self._ctx.update(option_builder.parse(input_))
 
@@ -521,7 +531,7 @@ class ConfigFetch(object):
 
         1. Instantiate ``ConfigFetch`` with blank ``arg``.
         2. Create ``ArgumentParser``, edit as necessary.
-        3. ``.build_arguments`` (populate ``ArgumentParser`` with metadata).
+        3. ``.build_arguments`` (populate ``ArgumentParser`` with arguments).
         4. Parse commandline (``ArgumentParser.parse_args``).
         5. ``.set_arguments`` below with the new ``args``.
         """
@@ -650,7 +660,7 @@ class SectionProxy(object):
 
 
 class Double(object):
-    """Supply a parent section to fallback, before 'DEFAULT'.
+    """Supply a parent section fallback, before 'DEFAULT'.
 
     An accessory helper class,
     not so related to this module's main concern.
@@ -727,11 +737,11 @@ def fetch(input_, *, encoding=None,
 
     the specific arguments are:
 
-    :param input_: a filename to open
-        if the name is in system path, or a string
-    :param encoding: encoding to use when openning the name
-
-    Files are read with ``format=None``.
+    :param input_: ``dict``, ``file obj`` or ``string``
+        according to ``option_builder``.
+        Additionally, if the input is string and in system path,
+        it tries to open to make file object
+    :param encoding: encoding to use when opening the input
     """
     conf = ConfigFetch(fmts=fmts, args=args, envs=envs, Func=Func,
         parser=parser, option_builder=option_builder)
@@ -866,8 +876,8 @@ class ConfigPrinter(object):
         self.width = width
         self.print = print
 
+    # Build clean dictionay from conf object
     def build_dict(self, conf):
-        """Build clean dictionay from conf object."""
 
         def build_section(section, ctx, defaults=None):
             d = {}
