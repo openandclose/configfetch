@@ -13,6 +13,8 @@ Changelog
 
 * Change default option_builder to DictOptionBuilder
 
+* Cut Python 3.5
+
 **Add:**
 
 * Add print_dict and print_ini methods.
