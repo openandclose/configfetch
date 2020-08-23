@@ -30,7 +30,7 @@ It is a single file Python module, with no other external library dependency.
 Usage
 -----
 
-.. code:: python
+.. code-block:: python
 
     >>> data = {
         'section1': {
@@ -82,7 +82,7 @@ Each key-values can be passed to ``argparse.ArgumentParser.add_argument()``.
 But it is not done automatically.
 So they are doing nothing for now.
 
-.. code:: ini
+.. code-block:: ini
 
     ## myapp.ini
     [section1]
@@ -99,7 +99,7 @@ So they are doing nothing for now.
                 :: choices: html, csv, text
                 :: default: html
 
-.. code:: python
+.. code-block:: python
 
     >>> import configfetch
     >>> builder = configfetch.FiniOptionBuilder
@@ -236,7 +236,7 @@ If this is not desirable, use ``store_const`` instead. E.g.::
 In most cases, you can delegate conversion to ``conf``,
 by conforming to the designated ``FINI`` format. E.g.
 
-.. code:: none
+.. code-block:: none
 
     # myapp.ini
     file=   :: f: comma
@@ -250,7 +250,7 @@ by conforming to the designated ``FINI`` format. E.g.
 
 instead of:
 
-.. code:: none
+.. code-block:: none
 
     parser.add_argument('--file', action='store', nargs='+')
 
@@ -258,7 +258,7 @@ instead of:
 
 or:
 
-.. code:: none
+.. code-block:: none
 
     parser.add_argument('--file', action='append')
 
@@ -341,7 +341,7 @@ All builtin functions except ``bar``, expect a string as ``value``.
 
     Any other ``'\'`` is kept as is.
 
-    .. code::
+    .. code-block:: none
 
         'aa, bb'    ->      ['aa', 'bb']
         r'aa\, bb'  ->      ['aa, bb']
@@ -370,12 +370,12 @@ All builtin functions except ``bar``, expect a string as ``value``.
     One element list returns that element.
     Blank list returns ``''``.
 
-    .. code::
+    .. code-block:: none
 
         scheme=     :: f: comma, bar
                     https?, ftp, mailto
 
-    .. code:: python
+    .. code-block:: python
 
         >>> conf.section1.scheme
         'https?|ftp|mailto'
@@ -391,12 +391,12 @@ All builtin functions except ``bar``, expect a string as ``value``.
 
     Example:
 
-    .. code::
+    .. code-block:: none
 
         command=    :: f: cmd
                     echo -e '"I have a dream.", he said.\n'
 
-    .. code:: python
+    .. code-block:: python
 
         >>> conf.section1.command
         ['echo', '-e', '"I have a dream.", he said.\n']
@@ -413,18 +413,18 @@ All builtin functions except ``bar``, expect a string as ``value``.
     return a string processed by ``str.format``, using ``fmts`` dictionary.
     E.g.
 
-    .. code::
+    .. code-block:: none
 
         # myapp.ini
         css=        :: f: fmt
                     {USER}/data/my.css
 
-    .. code:: python
+    .. code-block:: python
 
         # myapp.py
         fmts = {'USER': '/home/john'}
 
-    .. code:: python
+    .. code-block:: python
 
         >>> conf.section1.css
         '/home/john/data/my.css'
@@ -453,7 +453,7 @@ All builtin functions except ``bar``, expect a string as ``value``.
 
     Example:
 
-    .. code::
+    .. code-block:: none
 
         'Alice, Bob, Charlie'    -->  ['Alice', 'Bob', 'Charlie']
         '-Alice, +Dave'          -->  ['Bob', 'Charlie', 'Dave']
@@ -473,14 +473,14 @@ When registering user functions,
 
 Example:
 
-.. code::
+.. code-block:: none
 
     ## myapp.ini
     [section1]
     search=     :: f: glob
                 python
 
-.. code:: python
+.. code-block:: python
 
     ## myapp.py
     import configfetch
@@ -497,7 +497,7 @@ Example:
 
     conf = configfetch.fetch('myapp.ini', Func=MyFunc)
 
-.. code:: python
+.. code-block:: python
 
     # terminal
     >>> import myapp
@@ -607,7 +607,7 @@ They are divided in two: boolean options and non-boolean options.
       ``action`` is always ``store_const``, ``const`` is 'yes'
       (which will be converted to ``True`` when getting value).
       
-      .. code:: ini
+      .. code-block:: ini
       
           log=    : log events
                   :: f: bool
@@ -615,14 +615,14 @@ They are divided in two: boolean options and non-boolean options.
       
       becomes:
       
-      .. code:: python
+      .. code-block:: python
       
           [...].add_argument('--log', action='store_const', const='yes')
       
       If there is ``dest`` argument, it is interpreted as opposite flag.
       ``const`` becomes 'no' (converted to ``False``).
       
-      .. code:: ini
+      .. code-block:: ini
       
           no_log=     : do not log events
                       :: dest: log
@@ -631,7 +631,7 @@ They are divided in two: boolean options and non-boolean options.
       
       becomes:
       
-      .. code:: python
+      .. code-block:: python
       
           [...].add_argument('--no-log', action='store_const', const='no', dest='log')
 
@@ -664,7 +664,7 @@ Building Arguments
 5. ``ConfigFetch.set_arguments`` with the new ``args``
    (re-initialization).
 
-.. code::
+.. code-block:: none
 
     # myapp.ini
     [section1]
@@ -683,7 +683,7 @@ Building Arguments
                 :: choices: html, csv, text
                 :: default: html
 
-.. code:: python
+.. code-block:: python
 
     >>> import configfetch
     >>> builder=configfetch.FiniOptionBuilder
@@ -722,7 +722,7 @@ Double
 
 Example:
 
-.. code:: python
+.. code-block:: python
 
     conf.japanese = Double(conf.japanese, conf.asian)
 
@@ -748,14 +748,14 @@ Process:
   * long option is combined with the next argument with ``=``
   * short option is concatenated with the next argument
 
-.. code::
+.. code-block:: none
 
     ['--file', '-myfile.txt']  -->  ['--file=-myfile.txt']
     ['-f', '-myfile.txt']      -->  ['-f-myfile.txt']
 
 Example:
 
-.. code:: python
+.. code-block:: python
 
     # myapp.py
     import argparse
