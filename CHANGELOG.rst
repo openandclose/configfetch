@@ -14,6 +14,8 @@ Unreleased
 
 * Add int and float builtin functions
 
+* Add Python 3.9, 3.10
+
 ---
 
 v0.3.0 (2020-08-16)
