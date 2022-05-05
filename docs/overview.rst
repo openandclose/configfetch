@@ -326,6 +326,18 @@ All builtin functions except ``bar``, expect a string as ``value``.
 
     Other values raise an error.
 
+.. method:: int(value)
+
+    return integer from integer number string.
+
+    blank string (``''``) returns ``None``.
+
+.. method:: float(value)
+
+    return float number from float number string.
+
+    blank string (``''``) returns ``None``.
+
 .. method:: comma(value)
 
     Return a list using commas as separators.

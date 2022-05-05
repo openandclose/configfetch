@@ -103,6 +103,18 @@ class Func(object):
         return _parse_bool(value)
 
     @register
+    def int(self, value):
+        if value == '':
+            return None
+        return int(value)
+
+    @register
+    def float(self, value):
+        if value == '':
+            return None
+        return float(value)
+
+    @register
     def comma(self, value):
         return _parse_comma(value)
 

@@ -3,6 +3,15 @@ Changelog
 =========
 
 
+Unreleased
+----------
+
+**Add:**
+
+* Add int and float builtin functions
+
+---
+
 v0.3.0 (2020-08-16)
 -------------------
 

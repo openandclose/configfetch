@@ -206,6 +206,43 @@ class TestParseConfig:
         conf = fetch(data)
         assert conf.sec1.aa is None
 
+    def test_conf_int(self):
+        data = f("""
+        [sec1]
+        aa = :: f: int
+             4
+        """)
+        conf = fetch(data)
+        assert conf.sec1.aa == 4
+
+    def test_conf_int_valueerror(self):
+        data = f("""
+        [sec1]
+        aa = :: f: int
+             x
+        """)
+        conf = fetch(data)
+        with pytest.raises(ValueError):
+            assert conf.sec1.aa == 'x'
+
+    def test_conf_int_blank(self):
+        data = f("""
+        [sec1]
+        aa = :: f: int
+              
+        """)
+        conf = fetch(data)
+        assert conf.sec1.aa == None
+
+    def test_conf_float(self):
+        data = f("""
+        [sec1]
+        aa = :: f: float
+             4.3
+        """)
+        conf = fetch(data)
+        assert conf.sec1.aa == 4.3
+
     def test_conf_comma(self):
         data = f("""
         [sec1]
