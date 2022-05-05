@@ -30,6 +30,9 @@ It is a single file Python module, with no other external library dependency.
 Usage
 -----
 
+dict fromat
+^^^^^^^^^^^
+
 .. code-block:: python
 
     >>> data = {
@@ -83,6 +86,12 @@ Each key-values can be passed to ``argparse.ArgumentParser.add_argument()``.
 But it is not done automatically.
 So they are doing nothing for now.
 
+
+FINI format
+^^^^^^^^^^^
+
+Or you can do the same thing, from a kind of ``INI`` format file or string.
+
 .. code-block:: ini
 
     ## myapp.ini
@@ -111,8 +120,6 @@ So they are doing nothing for now.
     >>> conf.section1.output
     ''
 
-... Or you can do the same thing, from a kind of ``INI`` format file or string.
-
 ``': <something>'``:
     is the same as ``argparse['help']`` key value.
     For maximum readability it is specially treated.
@@ -124,6 +131,64 @@ So they are doing nothing for now.
     is the same as other ``'argparse'`` key-value pairs.
 
 Let's call this customized format, as ``FINI`` (Fetch-INI) format.
+
+
+With ``argparse``
+^^^^^^^^^^^^^^^^^
+
+1. Create ``ConfigFetch`` object, providing config files.
+2. Create ``argparse.ArgumentParser``.
+3. ``ConfigFetch.build_arguments``
+   (populate ``ArgumentParser`` with argument definitions).
+4. ``ArgumentParser.parse_args`` etc. (actually parse commandline).
+5. ``ConfigFetch.set_arguments``,
+   with the new parsed commandline ``args``.
+
+.. note ::
+
+    Commandline options may specify
+    where and how config files are loaded,
+    like ``'--userdir'`` or ``'--nouserdir'``.
+    In this case, you have to initialize ``ConfigFetch`` in two-pass.
+
+    In (1) above, just read the canonical (default) config file.
+
+    And after (5), read other config files.
+
+.. code-block:: none
+
+    # myapp.ini
+    [section1]
+    log=        : log the program
+                :: f: bool
+                no
+
+    users=      : assign users
+                :: f: comma
+                Alice, Bob, Charlie
+
+    output=     : output format
+                : when saving data
+                : to a file.
+                :: names: o
+                :: choices: html, csv, text
+                :: default: html
+
+.. code-block:: python
+
+    >>> import configfetch
+    >>> conf = configfetch.fetch('myapp.ini')
+    >>> import argparse
+    >>> parser = argparse.ArgumentParser()
+    >>> parser = conf.build_arguments(argument_parser=parser)
+    >>> args = parser.parse_args(['--log', '--users', 'Dan, Eve'])
+    >>> conf.set_arguments(args)
+    >>> conf.section1.log
+    True
+    >>> conf.section1.users
+    ['Dan', 'Eve']
+    >>> conf.section1.output
+    'html'
 
 
 API Overview
@@ -663,53 +728,6 @@ and provide no smart argument adjustments (exactly as you provided).
 
 Although, using in the same restrictions as ``FINI`` format is
 generally presupposed and recommended.
-
-
-Building Arguments
-------------------
-
-1. Instantiate ``ConfigFetch`` with blank ``arg``.
-2. Create ``ArgumentParser``, edit as necessary.
-3. ``ConfigFetch.build_arguments`` with the ``ArgumentParser``.
-   (populate it with arguments).
-4. Parse commandline (``ArgumentParser.parse_args``).
-5. ``ConfigFetch.set_arguments`` with the new ``args``
-   (re-initialization).
-
-.. code-block:: none
-
-    # myapp.ini
-    [section1]
-    log=        : log the program
-                :: f: bool
-                no
-
-    users=      : assign users
-                :: f: comma
-                Alice, Bob, Charlie
-
-    output=     : output format
-                : when saving data
-                : to a file.
-                :: names: o
-                :: choices: html, csv, text
-                :: default: html
-
-.. code-block:: python
-
-    >>> import configfetch
-    >>> conf = configfetch.fetch('myapp.ini')
-    >>> import argparse
-    >>> parser = argparse.ArgumentParser()
-    >>> parser = conf.build_arguments(argument_parser=parser)
-    >>> args = parser.parse_args(['--log', '--users', 'Dan, Eve'])
-    >>> conf.set_arguments(args)
-    >>> conf.section1.log
-    True
-    >>> conf.section1.users
-    ['Dan', 'Eve']
-    >>> conf.section1.output
-    'html'
 
 
 API

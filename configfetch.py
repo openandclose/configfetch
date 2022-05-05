@@ -10,7 +10,7 @@ import shlex
 import sys
 
 # Record available function names for value conversions.
-# After the module initialization, this list is populated.
+# After the module initialization, this is populated.
 _REGISTRY = set()
 
 _UNSET = object()
@@ -538,14 +538,6 @@ class ConfigFetch(object):
             to filter sections, default (``None``) is for all sections
 
         :returns: argument_parser
-
-        The usage is a bit complex, though. Normally:
-
-        1. Instantiate ``ConfigFetch`` with blank ``arg``.
-        2. Create ``ArgumentParser``, edit as necessary.
-        3. ``.build_arguments`` (populate ``ArgumentParser`` with arguments).
-        4. Parse commandline (``ArgumentParser.parse_args``).
-        5. ``.set_arguments`` below with the new ``args``.
         """
         ArgumentBuilder(self).build(argument_parser, sections)
         return argument_parser
@@ -786,8 +778,8 @@ def _get_plusminus_values(adjusts, initial=None):
         if adjust in (_UNSET, None, '', []):
             continue
         if not isinstance(adjust, str):
-            fmt = 'Each input should be a string. Got %r(%r)'
-            raise ValueError(fmt % (type(adjust), str(adjust)))
+            fmt = 'Each input should be a string. Got %s(%s)'
+            raise ValueError(fmt % (type(adjust), adjust))
         adjust = _parse_comma(adjust)
 
         if not any([a.startswith(('+', '-')) for a in adjust]):
