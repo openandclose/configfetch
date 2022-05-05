@@ -6,6 +6,11 @@ Changelog
 Unreleased
 ----------
 
+---
+
+v0.4.0 (2022-05-05)
+-------------------
+
 **Change:**
 
 * Change ConfigFetch default (DictOptionBuilder -> FiniOptionBuilder)
@@ -16,7 +21,6 @@ Unreleased
 
 * Add Python 3.9, 3.10
 
----
 
 v0.3.0 (2020-08-16)
 -------------------
