@@ -54,7 +54,8 @@ Usage
         },
     }
     >>> import configfetch
-    >>> conf = configfetch.fetch(data)
+    >>> builder = configfetch.DictOptionBuilder
+    >>> conf = configfetch.fetch(data, option_builder=builder)
     >>> conf.section1.log
     False
     >>> conf.section1.users
@@ -102,8 +103,7 @@ So they are doing nothing for now.
 .. code-block:: python
 
     >>> import configfetch
-    >>> builder = configfetch.FiniOptionBuilder
-    >>> conf = configfetch.fetch('myapp.ini', option_builder=builder)
+    >>> conf = configfetch.fetch('myapp.ini')
     >>> conf.section1.log
     False
     >>> conf.section1.users
@@ -698,8 +698,7 @@ Building Arguments
 .. code-block:: python
 
     >>> import configfetch
-    >>> builder=configfetch.FiniOptionBuilder
-    >>> conf = configfetch.fetch('myapp.ini', option_builder=builder)
+    >>> conf = configfetch.fetch('myapp.ini')
     >>> import argparse
     >>> parser = argparse.ArgumentParser()
     >>> parser = conf.build_arguments(argument_parser=parser)

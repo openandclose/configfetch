@@ -493,7 +493,7 @@ class ConfigFetch(object):
     """
 
     def __init__(self, *, fmts=None, args=None, envs=None,
-            Func=Func, option_builder=DictOptionBuilder,
+            Func=Func, option_builder=FiniOptionBuilder,
             parser=configparser.ConfigParser, **kwargs):
         self._fmts = fmts or {}
         self._args = args or argparse.Namespace()
@@ -740,7 +740,7 @@ class Double(object):
 
 def fetch(input_, *, encoding=None,
         fmts=None, args=None, envs=None, Func=Func,
-        parser=configparser.ConfigParser, option_builder=DictOptionBuilder,
+        parser=configparser.ConfigParser, option_builder=FiniOptionBuilder,
         **kwargs):
     """Fetch ``ConfigFetch`` object.
 

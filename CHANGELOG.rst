@@ -6,6 +6,10 @@ Changelog
 Unreleased
 ----------
 
+**Change:**
+
+* Change ConfigFetch default (DictOptionBuilder -> FiniOptionBuilder)
+
 **Add:**
 
 * Add int and float builtin functions
