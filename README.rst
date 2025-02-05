@@ -2,7 +2,7 @@
 ConfigFetch
 ===========
 
-This is a python3.6+ library
+This is a python3 library
 to provide a simpler commandline and configuration access,
 wrapping `argparse <https://docs.python.org/3/library/argparse.html>`__
 and `configparser <https://docs.python.org/3/library/configparser.html>`__.
