@@ -24,6 +24,8 @@ It is a single file Python module, with no other external library dependency.
 
 Tested on Python 3.10 and later.
 
+.. code:: bash
+
     pip install configfetch
 
 
